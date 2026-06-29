@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>નિર્ભય જેમ્સ ERP - Advanced Edit Panel</title>
+    <!-- Suppress Tailwind CDN warning BEFORE the script loads -->
+    <script>(function(){ const _w = console.warn; console.warn = function(...a){ if(typeof a[0]==='string' && a[0].includes('cdn.tailwindcss.com')) return; _w.apply(console,a); }; })();</script>
     <!-- Tailwind CSS v3 (pinned) — avoids oklch colors that break iOS Safari & html2canvas -->
     <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-    <script>
-        // Suppress Tailwind CDN "not for production" console warning (internal tool — CDN is fine)
-        (function(){ const _w = console.warn; console.warn = function(...a){ if(typeof a[0]==='string' && a[0].includes('cdn.tailwindcss.com')) return; _w.apply(console,a); }; })();
-    </script>
     
     <!-- Google Fonts: Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -270,6 +268,8 @@
                 <p class="text-xs opacity-80 mt-0.5">ડાયમંડ કોસ્ટિંગ ERP — લાઈવ એડિટ પેનલ અને સાઈઝ કૉલમ ગોઠવણી સાથે</p>
             </div>
             <div class="header-actions flex items-center gap-2 flex-wrap justify-end">
+                <button id="btnUndo" onclick="appUndo()" disabled class="bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed" title="Undo (છેલ્લો ફેરફાર પાછો લો)">↩ Undo</button>
+                <button id="btnRedo" onclick="appRedo()" disabled class="bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed" title="Redo (ફરી કરો)">↪ Redo</button>
                 <button id="viewToggleBtn" onclick="toggleViewMode()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all" title="View Mode Toggle">
                     🖥️ Desktop
                 </button>
@@ -998,6 +998,66 @@
             }
         }
 
+        // ============================================================
+        // ↩ UNDO / REDO ENGINE (max 30 snapshots)
+        // ============================================================
+        let _undoStack = [];
+        let _redoStack = [];
+        const _UNDO_MAX = 30;
+
+        function _snapshot() {
+            return JSON.stringify({
+                mainRecords: mainRecords,
+                charniMaster: charniMaster,
+                articleMaster: articleMaster
+            });
+        }
+
+        function pushUndo() {
+            _undoStack.push(_snapshot());
+            if (_undoStack.length > _UNDO_MAX) _undoStack.shift();
+            _redoStack = [];
+            _updateUndoRedoBtns();
+        }
+
+        function _restoreSnapshot(snap) {
+            let obj = JSON.parse(snap);
+            mainRecords   = obj.mainRecords;
+            charniMaster  = obj.charniMaster;
+            articleMaster = obj.articleMaster;
+            _ls('set','db_records',   JSON.stringify(mainRecords));
+            _ls('set','db_charni',    JSON.stringify(charniMaster));
+            _ls('set','db_articles',  JSON.stringify(articleMaster));
+            fbAutoSync();
+            renderMasterUI();
+            updateRegisterFilterDropdown();
+            renderRegisterTable();
+            renderRecentEntries();
+        }
+
+        function appUndo() {
+            if (!_undoStack.length) return;
+            _redoStack.push(_snapshot());
+            _restoreSnapshot(_undoStack.pop());
+            _updateUndoRedoBtns();
+        }
+
+        function appRedo() {
+            if (!_redoStack.length) return;
+            _undoStack.push(_snapshot());
+            _restoreSnapshot(_redoStack.pop());
+            _updateUndoRedoBtns();
+        }
+
+        function _updateUndoRedoBtns() {
+            let u = document.getElementById('btnUndo');
+            let r = document.getElementById('btnRedo');
+            if (u) u.disabled = _undoStack.length === 0;
+            if (r) r.disabled = _redoStack.length === 0;
+            if (u) u.title = _undoStack.length ? 'Undo (' + _undoStack.length + ' steps)' : 'Undo';
+            if (r) r.title = _redoStack.length ? 'Redo (' + _redoStack.length + ' steps)' : 'Redo';
+        }
+
         // Tab Switch Logic
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -1059,6 +1119,7 @@
             let name = input.value.trim().toUpperCase();
             if(!name) return;
             if(charniMaster.includes(name)) { alert("આ ચાલની ઓલરેડી માસ્ટરમાં અવેલેબલ છે!"); return; }
+            pushUndo();
             charniMaster.push(name);
             _ls('set','db_charni', JSON.stringify(charniMaster));
             input.value = "";
@@ -1067,6 +1128,7 @@
         }
 
         function deleteCharni(idx) {
+            pushUndo();
             charniMaster.splice(idx, 1);
             _ls('set','db_charni', JSON.stringify(charniMaster));
             renderMasterUI();
@@ -1108,6 +1170,7 @@
             let val = document.getElementById('m_charni_edit_val').value.trim().toUpperCase();
             if (!val) { alert('ચારણી નામ ખાલી ન હોવું જોઈએ!'); return; }
             if (charniMaster.some((c, i) => c === val && i !== _charniEditIdx)) { alert('આ ચારણી ઓલરેડી છે!'); return; }
+            pushUndo();
             charniMaster[_charniEditIdx] = val;
             _ls('set','db_charni', JSON.stringify(charniMaster));
             fbAutoSync();
@@ -1122,6 +1185,7 @@
 
         // ARTICLE MASTER FUNCTIONS
         function saveArticleMaster() {
+            pushUndo();
             let name = document.getElementById('m_article_name').value.trim().toUpperCase();
             if(!name) { alert("મહેરબાની કરીને આર્ટીકલનું નામ ટાઈપ કરો!"); return; }
 
@@ -1310,6 +1374,7 @@
         }
 
         function submitRecord() {
+            pushUndo();
             let editId = document.getElementById('f_edit_id').value;
             let articleName = document.getElementById('f_article').value;
             let kapan = document.getElementById('f_kapan').value;
@@ -3412,6 +3477,7 @@
 
         // Override deleteRecord to use dynamic password from settings
         function deleteRecord(uid) {
+            pushUndo();
             let pwd = prompt("🔒 ડિલીટ પાસવર્ડ નાખો:");
             if (pwd !== appSettings.deletePass) { alert("❌ ખોટો પાસવર્ડ!"); return; }
             if (confirm("ખરેખર ડીલીટ કરવું છે?")) {
