@@ -3435,23 +3435,35 @@
         function fbStartSyncListener() {
             if (!fbDb) return;
             let ref = fbDb.ref('diamond_erp/mainData');
+            // On first connect, push local data so remote always has latest
+            setTimeout(() => { fbPushData(); }, 500);
             ref.on('value', (snap) => {
                 if (!fbConnected) return;
                 let remote = snap.val();
                 if (remote && remote.lastUpdated) {
+                    let clean = fbDesanitizeKeys(remote);
                     let localTime = parseInt(_ls('get','fb_last_sync') || '0');
-                    let remoteTime = remote.lastUpdated || 0;
-                    if (remoteTime > localTime) {
-                        fbUpdateStatus('🔄 Remote data detected! Importing...');
-                        let clean = fbDesanitizeKeys(remote);
+                    let remoteTime = clean.lastUpdated || 0;
+                    // Always import remote data on first connect or when remote is newer
+                    let isNewDevice = !_ls('get','db_records') || JSON.parse(_ls('get','db_records') || '[]').length === 0;
+                    if (remoteTime > localTime || (isNewDevice && remoteTime > 0)) {
+                        fbUpdateStatus('🔄 Loading data from cloud...');
                         if (clean.mainRecords) mainRecords = clean.mainRecords;
                         if (clean.charniMaster) { charniMaster = clean.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
                         if (clean.articleMaster) { articleMaster = clean.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
                         saveRecords();
                         renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
+                        if (typeof cmpInitDropdown === 'function') cmpInitDropdown();
+                        if (typeof bestKapanPopulateCharniFilter === 'function') bestKapanPopulateCharniFilter();
                         _ls('set','fb_last_sync', Date.now().toString());
-                        fbUpdateStatus('✅ Synced from cloud');
+                        fbUpdateStatus('✅ Cloud data loaded');
+                    } else if (remoteTime < localTime) {
+                        // Local is newer — push to cloud
+                        fbPushData();
                     }
+                } else {
+                    // Firebase empty — push local data
+                    fbPushData();
                 }
             }, (err) => {
                 fbUpdateStatus('⚠️ Sync listener error: ' + err.message, true);
@@ -4055,6 +4067,11 @@
             cmpInitDropdown();
             cmpLoadKapans();
             renderRecentEntries();
+            
+            // Auto-connect Firebase if user is already logged in
+            if (_ls('get','fb_config') && !fbConnected) {
+                setTimeout(() => { if (typeof fbConnect === 'function') fbConnect(); }, 1500);
+            }
             
             // ⌨️ ENTER → NEXT FIELD — works across ALL tabs, modals
             document.addEventListener('keydown', function(e) {
