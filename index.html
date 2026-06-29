@@ -3692,45 +3692,38 @@
 
         function fbStartSyncListener() {
             if (!fbDb) return;
-            if (_syncListenerActive) return; // already listening — don't add duplicate
+            if (_syncListenerActive) return;
             _syncListenerActive = true;
 
             let ref = fbDb.ref('diamond_erp/mainData');
-            ref.off(); // detach any stale listeners from previous sessions
+            ref.off();
 
-            // Push local data FIRST (sets _fbPushing=true) so the immediate
-            // listener callback below sees _fbPushing=true and skips overwrite
-            fbPushData();
-
-            ref.on('value', (snap) => {
-                if (!fbConnected || _fbPushing) return; // skip while we are pushing
+            // Check if Firebase is empty or local is newer — push up on connect
+            ref.once('value', (snap) => {
                 let remote = snap.val();
-                if (remote && remote.lastUpdated) {
+                let localTime = parseInt(_ls('get','fb_last_sync') || '0');
+                let remoteTime = (remote && remote.lastUpdated) ? remote.lastUpdated : 0;
+                let isNewDevice = !_ls('get','db_records') || JSON.parse(_ls('get','db_records') || '[]').length === 0;
+                if (!remote || !remoteTime || localTime >= remoteTime) {
+                    // Local is same or newer — push up
+                    fbPushData();
+                } else if (remoteTime > localTime || (isNewDevice && remoteTime > 0)) {
+                    // Remote is newer — load from cloud
                     let clean = fbDesanitizeKeys(remote);
-                    let localTime = parseInt(_ls('get','fb_last_sync') || '0');
-                    let remoteTime = clean.lastUpdated || 0;
-                    let isNewDevice = !_ls('get','db_records') || JSON.parse(_ls('get','db_records') || '[]').length === 0;
-                    if (remoteTime > localTime || (isNewDevice && remoteTime > 0)) {
-                        fbUpdateStatus('🔄 Loading data from cloud...');
-                        if (clean.mainRecords) { mainRecords = Array.isArray(clean.mainRecords) ? clean.mainRecords : Object.values(clean.mainRecords); }
-                        if (clean.charniMaster) { charniMaster = Array.isArray(clean.charniMaster) ? clean.charniMaster : Object.values(clean.charniMaster); _ls('set','db_charni', JSON.stringify(charniMaster)); }
-                        if (clean.articleMaster) { articleMaster = Array.isArray(clean.articleMaster) ? clean.articleMaster : Object.values(clean.articleMaster); _ls('set','db_articles', JSON.stringify(articleMaster)); }
-                        _ls('set','fb_last_sync', remoteTime.toString());
-                        saveRecords();
-                        renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
-                        if (typeof cmpInitDropdown === 'function') cmpInitDropdown();
-                        if (typeof bestKapanPopulateCharniFilter === 'function') bestKapanPopulateCharniFilter();
-                        fbUpdateStatus('✅ Cloud data loaded');
-                    } else if (remoteTime < localTime) {
-                        fbPushData(); // local is newer — push up
-                    }
-                } else {
-                    fbPushData(); // Firebase empty — push local
+                    fbUpdateStatus('🔄 Loading data from cloud...');
+                    if (clean.mainRecords) { mainRecords = Array.isArray(clean.mainRecords) ? clean.mainRecords : Object.values(clean.mainRecords); }
+                    if (clean.charniMaster) { charniMaster = Array.isArray(clean.charniMaster) ? clean.charniMaster : Object.values(clean.charniMaster); _ls('set','db_charni', JSON.stringify(charniMaster)); }
+                    if (clean.articleMaster) { articleMaster = Array.isArray(clean.articleMaster) ? clean.articleMaster : Object.values(clean.articleMaster); _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                    _ls('set','fb_last_sync', remoteTime.toString());
+                    _ls('set','db_records', JSON.stringify(mainRecords));
+                    renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
+                    if (typeof cmpInitDropdown === 'function') cmpInitDropdown();
+                    if (typeof bestKapanPopulateCharniFilter === 'function') bestKapanPopulateCharniFilter();
+                    fbUpdateStatus('✅ Cloud data loaded');
                 }
-            }, (err) => {
-                fbUpdateStatus('⚠️ Sync listener error: ' + err.message, true);
             });
 
+            // Poll every 2s for changes from other devices (read-only, no push)
             if (fbSyncTimer) clearInterval(fbSyncTimer);
             fbSyncTimer = setInterval(() => { fbPullLatest(); }, 2000);
         }
@@ -3761,14 +3754,16 @@
             return obj;
         }
 
+        let _fbPushPending = false;
+
         async function fbPushData() {
-            if (!fbDb || !fbConnected || _fbPushing) return;
+            if (!fbDb || !fbConnected) return;
+            if (_fbPushing) { _fbPushPending = true; return; }
             _fbPushing = true;
+            _fbPushPending = false;
             try {
                 let ref = fbDb.ref('diamond_erp/mainData');
                 let now = Date.now();
-                // Set local sync time BEFORE the update so the listener
-                // callback (which fires after update) sees remoteTime == localTime
                 _ls('set','fb_last_sync', now.toString());
                 let safeData = fbSanitizeKeys({
                     mainRecords: mainRecords,
@@ -3776,12 +3771,13 @@
                     articleMaster: articleMaster,
                     lastUpdated: now
                 });
-                await ref.set(safeData); // ref.set (not update) — ensures clean write, no stale keys
+                await ref.set(safeData);
                 fbUpdateStatus('✅ Data synced to cloud');
             } catch(e) {
                 fbUpdateStatus('⚠️ Sync error: ' + e.message, true);
             } finally {
                 _fbPushing = false;
+                if (_fbPushPending) { setTimeout(fbPushData, 100); }
             }
         }
 
