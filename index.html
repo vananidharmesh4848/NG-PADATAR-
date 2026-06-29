@@ -27,7 +27,7 @@
 
     <!-- Firebase SDK for Live Sync -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
     <!-- External libraries required for Excel and PDF Export / Capturing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -775,6 +775,7 @@
                     <div class="grid grid-cols-2 gap-2 text-xs">
                         <input type="text" id="fb_apiKey" placeholder="API Key" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
                         <input type="text" id="fb_authDomain" placeholder="authDomain" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
+                        <input type="text" id="fb_databaseURL" placeholder="databaseURL" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900 col-span-2">
                         <input type="text" id="fb_projectId" placeholder="projectId" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
                         <input type="text" id="fb_storageBucket" placeholder="storageBucket" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
                         <input type="text" id="fb_messagingSenderId" placeholder="messagingSenderId" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
@@ -3240,6 +3241,7 @@
             return {
                 apiKey: document.getElementById('fb_apiKey').value.trim(),
                 authDomain: document.getElementById('fb_authDomain').value.trim(),
+                databaseURL: document.getElementById('fb_databaseURL').value.trim(),
                 projectId: document.getElementById('fb_projectId').value.trim(),
                 storageBucket: document.getElementById('fb_storageBucket').value.trim(),
                 messagingSenderId: document.getElementById('fb_messagingSenderId').value.trim(),
@@ -3259,16 +3261,17 @@
                     let cfg = JSON.parse(data);
                     document.getElementById('fb_apiKey').value = cfg.apiKey || '';
                     document.getElementById('fb_authDomain').value = cfg.authDomain || '';
+                    document.getElementById('fb_databaseURL').value = cfg.databaseURL || '';
                     document.getElementById('fb_projectId').value = cfg.projectId || '';
                     document.getElementById('fb_storageBucket').value = cfg.storageBucket || '';
                     document.getElementById('fb_messagingSenderId').value = cfg.messagingSenderId || '';
                     document.getElementById('fb_appId').value = cfg.appId || '';
                 } catch(e) {}
             } else {
-                // Pre-fill default config and save it
                 let cfg = {
                     apiKey: "AIzaSyDvu7pJMXatKNHFAuJMtsh_zpmb8Jr0BCM",
                     authDomain: "ng-cost.firebaseapp.com",
+                    databaseURL: "https://ng-cost-default-rtdb.firebaseio.com",
                     projectId: "ng-cost",
                     storageBucket: "ng-cost.firebasestorage.app",
                     messagingSenderId: "1085823954995",
@@ -3291,17 +3294,16 @@
         function fbConnect() {
             if (fbConnected) { fbUpdateStatus('✅ Already connected'); return; }
             let cfg = fbGetConfig();
-            if (!cfg.apiKey || !cfg.projectId) {
-                fbUpdateStatus('❌ કૃપા કરીને Firebase config ભરો (API Key અને Project ID જરૂરી)', true);
+            if (!cfg.apiKey || !cfg.projectId || !cfg.databaseURL) {
+                fbUpdateStatus('❌ API Key, Project ID અને Database URL જરૂરી', true);
                 return;
             }
             try {
                 fbApp = firebase.initializeApp(cfg);
-                fbDb = firebase.firestore(fbApp);
+                fbDb = firebase.database(fbApp);
                 fbConnected = true;
                 fbSaveConfigToLS();
-                fbUpdateStatus('✅ Firebase Connected!');
-                // Start auto-sync listener
+                fbUpdateStatus('✅ Firebase RTDB Connected!');
                 fbStartSyncListener();
             } catch(e) {
                 fbUpdateStatus('❌ Connect error: ' + e.message, true);
@@ -3311,40 +3313,34 @@
 
         function fbDisconnect() {
             if (fbSyncTimer) { clearInterval(fbSyncTimer); fbSyncTimer = null; }
-            if (fbApp) {
-                try { fbApp.delete(); } catch(e) {}
-                fbApp = null; fbDb = null;
-            }
+            fbDb = null; fbApp = null;
             fbConnected = false;
             fbUpdateStatus('⏸️ Disconnected');
         }
 
         function fbStartSyncListener() {
             if (!fbDb) return;
-            // Listen for remote changes from Firestore
-            fbDb.collection('diamond_erp').doc('mainData').onSnapshot((doc) => {
-                if (doc.exists && fbConnected) {
-                    let remote = doc.data();
-                    if (remote && remote.lastUpdated) {
-                        let localTime = parseInt(_ls('get','fb_last_sync') || '0');
-                        let remoteTime = remote.lastUpdated?.toMillis?.() || remote.lastUpdated || 0;
-                        if (remoteTime > localTime) {
-                            fbUpdateStatus('🔄 Remote data detected! Importing...');
-                            if (remote.mainRecords) mainRecords = remote.mainRecords;
-                            if (remote.charniMaster) { charniMaster = remote.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
-                            if (remote.articleMaster) { articleMaster = remote.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
-                            saveRecords();
-                            renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
-                            _ls('set','fb_last_sync', Date.now().toString());
-                            fbUpdateStatus('✅ Synced from cloud');
-                        }
+            let ref = fbDb.ref('diamond_erp/mainData');
+            ref.on('value', (snap) => {
+                if (!fbConnected) return;
+                let remote = snap.val();
+                if (remote && remote.lastUpdated) {
+                    let localTime = parseInt(_ls('get','fb_last_sync') || '0');
+                    let remoteTime = remote.lastUpdated || 0;
+                    if (remoteTime > localTime) {
+                        fbUpdateStatus('🔄 Remote data detected! Importing...');
+                        if (remote.mainRecords) mainRecords = remote.mainRecords;
+                        if (remote.charniMaster) { charniMaster = remote.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
+                        if (remote.articleMaster) { articleMaster = remote.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                        saveRecords();
+                        renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
+                        _ls('set','fb_last_sync', Date.now().toString());
+                        fbUpdateStatus('✅ Synced from cloud');
                     }
                 }
             }, (err) => {
                 fbUpdateStatus('⚠️ Sync listener error: ' + err.message, true);
             });
-
-            // Auto push local data every 30 seconds
             if (fbSyncTimer) clearInterval(fbSyncTimer);
             fbSyncTimer = setInterval(() => { fbPushData(); }, 30000);
         }
@@ -3352,13 +3348,13 @@
         async function fbPushData() {
             if (!fbDb || !fbConnected) return;
             try {
-                let exportObj = {
+                let ref = fbDb.ref('diamond_erp/mainData');
+                await ref.update({
                     mainRecords: mainRecords,
                     charniMaster: charniMaster,
                     articleMaster: articleMaster,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                };
-                await fbDb.collection('diamond_erp').doc('mainData').set(exportObj, { merge: true });
+                    lastUpdated: Date.now()
+                });
                 _ls('set','fb_last_sync', Date.now().toString());
                 fbUpdateStatus('✅ Data synced to cloud');
             } catch(e) {
@@ -3370,21 +3366,17 @@
             if (!fbConnected) { fbUpdateStatus('❌ Connect Firebase first!', true); return; }
             fbUpdateStatus('🔄 Syncing...');
             fbPushData().then(() => {
-                // Also try to pull
                 if (fbDb) {
-                    fbDb.collection('diamond_erp').doc('mainData').get().then((doc) => {
-                        if (doc.exists) {
-                            let data = doc.data();
-                            if (data.mainRecords && data.lastUpdated) {
-                                let localTime = parseInt(_ls('get','fb_last_sync') || '0');
-                                let remoteTime = data.lastUpdated?.toMillis?.() || 0;
-                                if (remoteTime > localTime) {
-                                    mainRecords = data.mainRecords;
-                                    if (data.charniMaster) { charniMaster = data.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
-                                    if (data.articleMaster) { articleMaster = data.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
-                                    saveRecords();
-                                    renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
-                                }
+                    fbDb.ref('diamond_erp/mainData').once('value').then((snap) => {
+                        let data = snap.val();
+                        if (data && data.mainRecords && data.lastUpdated) {
+                            let localTime = parseInt(_ls('get','fb_last_sync') || '0');
+                            if (data.lastUpdated > localTime) {
+                                mainRecords = data.mainRecords;
+                                if (data.charniMaster) { charniMaster = data.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
+                                if (data.articleMaster) { articleMaster = data.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                                saveRecords();
+                                renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                             }
                         }
                         fbUpdateStatus('✅ Sync complete');
@@ -3394,29 +3386,20 @@
         }
 
         function fbShowHelp() {
-            alert(`☁️ Firebase Live Sync Setup Guide:
+            alert(`☁️ Firebase Realtime DB Sync Setup Guide:
 
 1. Go to https://console.firebase.google.com
-2. Click "Create Project" (or use existing)
-3. Name it "diamond-erp-sync" (or any name)
-4. Disable Google Analytics (optional)
-5. Wait for project creation
-6. Click "Web" icon (</>)
-7. Register app (name: "diamond-erp")
-8. Copy the firebaseConfig object values
-9. Paste them in the fields above
-10. Click "Connect"
+2. Open project "ng-cost"
+3. Left menu → Realtime Database
+4. Click "Create Database"
+5. Choose location → Next
+6. Select "Start in test mode" → Enable
+7. Go to ⚙️ Project Settings > General
+8. In "Your apps" section, copy config values
+9. Paste in fields above, click "Connect"
 
-Then go to Firestore Database:
-11. Left menu → Firestore Database
-12. Click "Create Database"
-13. Choose "Start in test mode"
-14. Location: choose closest to you
-
-✅ After this, data will auto-sync every 30 seconds!`);
-
-            // Try opening the URL
-            window.open('https://console.firebase.google.com', '_blank');
+✅ Data auto-syncs every 30 seconds!`);
+            window.open('https://console.firebase.google.com/project/ng-cost/database/ng-cost-default-rtdb/data', '_blank');
         }
 
         // ============================================================
