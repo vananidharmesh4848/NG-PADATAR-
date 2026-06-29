@@ -25,6 +25,103 @@
         }
     </script>
 
+    <!-- 🔐 CRITICAL: Login script loaded FIRST (before Firebase) so login works even if CDN fails -->
+    <script>
+        // 🛡️ Safe localStorage (iOS private mode throws errors)
+        let _memStore = {};
+        let _lsOk = true;
+        function _ls(method, key, val) {
+            if (!_lsOk) {
+                if (method === 'get') return _memStore[key] || null;
+                if (method === 'set') { _memStore[key] = val; return; }
+                if (method === 'remove') { delete _memStore[key]; return; }
+                return null;
+            }
+            try {
+                if (method === 'get') return localStorage.getItem(key);
+                if (method === 'set') { localStorage.setItem(key, val); return; }
+                if (method === 'remove') { localStorage.removeItem(key); return; }
+            } catch(e) { _lsOk = false; return _ls(method, key, val); }
+        }
+        try { _ls('set','_test_', '1'); _ls('remove','_test_'); } catch(e) { _lsOk = false; }
+        // ⚙️ App Settings (load defaults or stored)
+        let appSettings = JSON.parse(_ls('get','app_settings')) || {
+            appTitle: 'નિર્ભય જેમ્સ ERP v2.7',
+            adminId: 'admin',
+            adminPass: 'admin123',
+            deletePass: 'KP',
+            editPass: 'EP'
+        };
+        // 🔐 LOGIN FUNCTIONS
+        function checkAutoLogin() {
+            let token = _ls('get','login_token');
+            let tokenTime = parseInt(_ls('get','login_token_time') || '0');
+            let sevenDays = 7 * 24 * 60 * 60 * 1000;
+            if (token === 'logged_in' && (Date.now() - tokenTime) < sevenDays) {
+                document.getElementById('loginOverlay').classList.add('hidden');
+            }
+            let titleEl = document.getElementById('loginAppTitle');
+            if (titleEl && appSettings.appTitle) titleEl.innerText = appSettings.appTitle;
+        }
+        function doLogin() {
+            let id = document.getElementById('loginId').value.trim();
+            let pass = document.getElementById('loginPass').value;
+            let errEl = document.getElementById('loginError');
+            if (id === appSettings.adminId && pass === appSettings.adminPass) {
+                errEl.classList.add('hidden');
+                if (document.getElementById('rememberMe').checked) {
+                    _ls('set','login_token', 'logged_in');
+                    _ls('set','login_token_time', Date.now().toString());
+                } else {
+                    _ls('remove','login_token');
+                    _ls('remove','login_token_time');
+                }
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('loginId').value = '';
+                document.getElementById('loginPass').value = '';
+                // Post-login extras (only if main script has loaded)
+                if (typeof addLoginHistoryEntry === 'function') {
+                    addLoginHistoryEntry('User: ' + id + ' | ' + (navigator.platform || '') + ' | ' + (navigator.userAgent || '').substring(0, 80));
+                }
+                if (typeof checkAutoBackupOnLogin === 'function') {
+                    checkAutoBackupOnLogin();
+                }
+                if (typeof fbLoadConfigFromLS === 'function') {
+                    fbLoadConfigFromLS();
+                    setTimeout(() => {
+                        if (typeof fbConnect === 'function' && !fbConnected && _ls('get','fb_config')) fbConnect();
+                    }, 1000);
+                }
+            } else {
+                errEl.classList.remove('hidden');
+                document.getElementById('loginPass').value = '';
+                document.getElementById('loginPass').focus();
+            }
+        }
+        function doLogout() {
+            if (!confirm('Logout કરવું છે?')) return;
+            _ls('remove','login_token');
+            _ls('remove','login_token_time');
+            document.getElementById('loginId').value = '';
+            document.getElementById('loginPass').value = '';
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('loginOverlay').classList.remove('hidden');
+        }
+        function togglePass(inputId) {
+            let el = document.getElementById(inputId);
+            el.type = el.type === 'password' ? 'text' : 'password';
+        }
+        // Auto-login check runs as soon as DOM is ready (before external scripts)
+        function _loginInit() {
+            checkAutoLogin();
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', _loginInit);
+        } else {
+            _loginInit();
+        }
+    </script>
+
     <!-- Firebase SDK for Live Sync -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -831,24 +928,6 @@
         </div>
 
     <script>
-        // 🛡️ Safe localStorage (iOS private mode throws errors)
-        let _memStore = {};
-        let _lsOk = true;
-        function _ls(method, key, val) {
-            if (!_lsOk) {
-                if (method === 'get') return _memStore[key] || null;
-                if (method === 'set') { _memStore[key] = val; return; }
-                if (method === 'remove') { delete _memStore[key]; return; }
-                return null;
-            }
-            try {
-                if (method === 'get') return localStorage.getItem(key);
-                if (method === 'set') { localStorage.setItem(key, val); return; }
-                if (method === 'remove') { localStorage.removeItem(key); return; }
-            } catch(e) { _lsOk = false; return _ls(method, key, val); }
-        }
-        try { _ls('set','_test_', '1'); _ls('remove','_test_'); } catch(e) { _lsOk = false; }
-
         // ============================================================
         // 🔤 GUJARATI UNICODE FONT FOR PDF (Noto Sans Gujarati + Latin merged)
         // jsPDF's built-in fonts (Helvetica/Times) have NO Gujarati glyphs, which
@@ -3110,14 +3189,6 @@
         // ============================================================
         // ⚙️ SETTINGS FUNCTIONS
         // ============================================================
-        let appSettings = JSON.parse(_ls('get','app_settings')) || {
-            appTitle: 'નિર્ભય જેમ્સ ERP v2.7',
-            adminId: 'admin',
-            adminPass: 'admin123',
-            deletePass: 'KP',
-            editPass: 'EP'
-        };
-
         function applySettings() {
             if (appSettings.appTitle) {
                 let el = document.getElementById('appTitleDisplay');
@@ -3185,11 +3256,6 @@
             setTimeout(() => {
                 document.getElementById('settingsSavedMsg').classList.add('hidden');
             }, 3000);
-        }
-
-        function togglePass(inputId) {
-            let el = document.getElementById(inputId);
-            el.type = el.type === 'password' ? 'text' : 'password';
         }
 
         // Close modals on backdrop click
@@ -3638,66 +3704,6 @@
                     <button onclick="deleteRecord(${r.id})" class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 font-black px-2 py-1 rounded cursor-pointer shrink-0" title="Delete">🗑</button>
                 </div>`;
             }).join('');
-        }
-
-        // ============================================================
-        // 🔐 LOGIN FUNCTIONS
-        // ============================================================
-        function checkAutoLogin() {
-            let token = _ls('get','login_token');
-            let tokenTime = parseInt(_ls('get','login_token_time') || '0');
-            let sevenDays = 7 * 24 * 60 * 60 * 1000;
-            if (token === 'logged_in' && (Date.now() - tokenTime) < sevenDays) {
-                document.getElementById('loginOverlay').classList.add('hidden');
-            }
-            // Update login page title from settings
-            let titleEl = document.getElementById('loginAppTitle');
-            if (titleEl && appSettings.appTitle) titleEl.innerText = appSettings.appTitle;
-        }
-
-        function doLogin() {
-            let id = document.getElementById('loginId').value.trim();
-            let pass = document.getElementById('loginPass').value;
-            let errEl = document.getElementById('loginError');
-            if (id === appSettings.adminId && pass === appSettings.adminPass) {
-                errEl.classList.add('hidden');
-                if (document.getElementById('rememberMe').checked) {
-                    _ls('set','login_token', 'logged_in');
-                    _ls('set','login_token_time', Date.now().toString());
-                } else {
-                    _ls('remove','login_token');
-                    _ls('remove','login_token_time');
-                }
-                // Record login history
-                addLoginHistoryEntry('User: ' + id + ' | ' + (navigator.platform || '') + ' | ' + (navigator.userAgent || '').substring(0, 80));
-                // Check auto backup
-                checkAutoBackupOnLogin();
-                document.getElementById('loginOverlay').classList.add('hidden');
-                document.getElementById('loginId').value = '';
-                document.getElementById('loginPass').value = '';
-                // Auto-connect Firebase
-                fbLoadConfigFromLS();
-                setTimeout(() => {
-                    if (!fbConnected && _ls('get','fb_config')) fbConnect();
-                }, 1000);
-            } else {
-                errEl.classList.remove('hidden');
-                document.getElementById('loginPass').value = '';
-                document.getElementById('loginPass').focus();
-                // Shake animation
-                errEl.style.animation = 'none';
-                setTimeout(() => errEl.style.animation = '', 10);
-            }
-        }
-
-        function doLogout() {
-            if (!confirm('Logout કરવું છે?')) return;
-            _ls('remove','login_token');
-            _ls('remove','login_token_time');
-            document.getElementById('loginId').value = '';
-            document.getElementById('loginPass').value = '';
-            document.getElementById('loginError').classList.add('hidden');
-            document.getElementById('loginOverlay').classList.remove('hidden');
         }
 
         // ============================================================
