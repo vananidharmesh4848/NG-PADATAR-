@@ -6,6 +6,10 @@
     <title>નિર્ભય જેમ્સ ERP - Advanced Edit Panel</title>
     <!-- Tailwind CSS v3 (pinned) — avoids oklch colors that break iOS Safari & html2canvas -->
     <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script>
+        // Suppress Tailwind CDN "not for production" console warning (internal tool — CDN is fine)
+        (function(){ const _w = console.warn; console.warn = function(...a){ if(typeof a[0]==='string' && a[0].includes('cdn.tailwindcss.com')) return; _w.apply(console,a); }; })();
+    </script>
     
     <!-- Google Fonts: Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -309,9 +313,12 @@
         <div id="tab-entry" class="tab-content bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-sm">
             <div class="flex justify-between items-center border-b border-blue-200 pb-1 mb-4">
                 <h2 id="formTitle" class="text-sm font-bold text-blue-900 uppercase tracking-wider">📝 દૈનિક કાપન ડેટા એન્ટ્રી ફોર્મ</h2>
-                <button id="btnCancelEdit" onclick="clearForm()" class="hidden bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded shadow">
-                    ❌ એડિટ કેન્સલ કરો
-                </button>
+                <div class="flex items-center gap-1.5 flex-wrap justify-end">
+                    <button id="btnPrevRecord" onclick="navigateRecord(-1)" class="hidden bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-3 rounded shadow cursor-pointer">◄ અગળ</button>
+                    <span id="navRecordInfo" class="hidden text-xs font-black text-blue-700 bg-blue-100 border border-blue-300 px-2 py-1 rounded"></span>
+                    <button id="btnNextRecord" onclick="navigateRecord(1)" class="hidden bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-3 rounded shadow cursor-pointer">પાછળ ►</button>
+                    <button id="btnCancelEdit" onclick="clearForm()" class="hidden bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-3 rounded shadow cursor-pointer">❌ એડિટ કેન્સલ</button>
+                </div>
             </div>
             
             <input type="hidden" id="f_edit_id" value="">
@@ -448,11 +455,20 @@
                 
                 <div class="bg-white p-4 rounded-lg border border-amber-200 shadow-sm">
                     <h2 class="text-xs font-bold text-amber-950 mb-3 border-b pb-1.5 uppercase tracking-wide">૧. ચારણી માસ્ટર (Add Charni)</h2>
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="m_charni_name" placeholder="દા.ત. +000 TO -1" class="p-2 text-xs border rounded w-full font-bold">
+                    <div id="charniAddRow" class="flex gap-2 mb-2">
+                        <input type="text" id="m_charni_name" placeholder="દા.ત. +000 TO -1" class="p-2 text-xs border rounded w-full font-bold" onkeydown="if(event.key==='Enter') addCharniMaster()">
                         <button onclick="addCharniMaster()" class="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold py-2 px-4 rounded whitespace-nowrap cursor-pointer">
-                            ➕ ચારણી ઉમેરો
+                            ➕ ઉમેરો
                         </button>
+                    </div>
+                    <!-- Edit mode row (hidden by default) -->
+                    <div id="charniEditRow" class="hidden flex gap-1 mb-2 items-center flex-wrap bg-amber-50 border border-amber-300 rounded p-1.5">
+                        <button onclick="navigateCharni(-1)" id="btnCharniPrev" class="bg-blue-600 text-white text-xs font-bold py-1 px-2.5 rounded cursor-pointer">◀</button>
+                        <span id="charniEditInfo" class="text-[10px] font-black text-amber-800 px-1">1/1</span>
+                        <button onclick="navigateCharni(1)" id="btnCharniNext" class="bg-blue-600 text-white text-xs font-bold py-1 px-2.5 rounded cursor-pointer">▶</button>
+                        <input type="text" id="m_charni_edit_val" class="p-1.5 text-xs border-2 border-amber-400 rounded font-bold flex-1 min-w-[100px] bg-white">
+                        <button onclick="updateCharni()" class="bg-green-700 hover:bg-green-800 text-white text-xs font-bold py-1 px-3 rounded cursor-pointer">✅ અપડેટ</button>
+                        <button onclick="cancelCharniEdit()" class="bg-slate-400 hover:bg-slate-500 text-white text-xs font-bold py-1 px-3 rounded cursor-pointer">❌ કેન્સલ</button>
                     </div>
                     <div class="flex flex-wrap gap-1.5 p-3 bg-slate-50 rounded border max-h-[120px] overflow-y-auto" id="charniChipsContainer">
                         </div>
@@ -1057,6 +1073,53 @@
             fbAutoSync();
         }
 
+        let _charniEditIdx = -1;
+        function editCharni(idx) {
+            _charniEditIdx = idx;
+            document.getElementById('charniAddRow').classList.add('hidden');
+            document.getElementById('charniEditRow').classList.remove('hidden');
+            document.getElementById('m_charni_edit_val').value = charniMaster[idx];
+            document.getElementById('m_charni_edit_val').focus();
+            _updateCharniEditInfo();
+        }
+        function _updateCharniEditInfo() {
+            let info = document.getElementById('charniEditInfo');
+            let prevBtn = document.getElementById('btnCharniPrev');
+            let nextBtn = document.getElementById('btnCharniNext');
+            info.textContent = (_charniEditIdx + 1) + ' / ' + charniMaster.length;
+            prevBtn.style.opacity = _charniEditIdx === 0 ? '0.35' : '1';
+            prevBtn.disabled = _charniEditIdx === 0;
+            nextBtn.style.opacity = _charniEditIdx === charniMaster.length - 1 ? '0.35' : '1';
+            nextBtn.disabled = _charniEditIdx === charniMaster.length - 1;
+        }
+        function navigateCharni(dir) {
+            // Save current edit first (silent)
+            let val = document.getElementById('m_charni_edit_val').value.trim().toUpperCase();
+            if (val && val !== charniMaster[_charniEditIdx]) {
+                charniMaster[_charniEditIdx] = val;
+                _ls('set','db_charni', JSON.stringify(charniMaster));
+                renderMasterUI();
+            }
+            let newIdx = _charniEditIdx + dir;
+            if (newIdx < 0 || newIdx >= charniMaster.length) return;
+            editCharni(newIdx);
+        }
+        function updateCharni() {
+            let val = document.getElementById('m_charni_edit_val').value.trim().toUpperCase();
+            if (!val) { alert('ચારણી નામ ખાલી ન હોવું જોઈએ!'); return; }
+            if (charniMaster.some((c, i) => c === val && i !== _charniEditIdx)) { alert('આ ચારણી ઓલરેડી છે!'); return; }
+            charniMaster[_charniEditIdx] = val;
+            _ls('set','db_charni', JSON.stringify(charniMaster));
+            fbAutoSync();
+            cancelCharniEdit();
+            renderMasterUI();
+        }
+        function cancelCharniEdit() {
+            _charniEditIdx = -1;
+            document.getElementById('charniAddRow').classList.remove('hidden');
+            document.getElementById('charniEditRow').classList.add('hidden');
+        }
+
         // ARTICLE MASTER FUNCTIONS
         function saveArticleMaster() {
             let name = document.getElementById('m_article_name').value.trim().toUpperCase();
@@ -1156,7 +1219,9 @@
             charniMaster.forEach((ch, i) => {
                 chipsCont.innerHTML += `
                     <span class="bg-slate-200 text-slate-800 text-[11px] font-bold px-2 py-1 rounded flex items-center gap-1 border border-slate-300 shadow-sm">
-                        ${ch} <button onclick="deleteCharni(${i})" class="text-red-500 font-bold ml-1 cursor-pointer hover:text-red-700">×</button>
+                        ${ch}
+                        <button onclick="editCharni(${i})" style="color:#2563eb;font-size:11px;background:none;border:none;cursor:pointer;font-weight:900;padding:0 2px;" title="Edit">✏️</button>
+                        <button onclick="deleteCharni(${i})" class="text-red-500 font-bold ml-0.5 cursor-pointer hover:text-red-700" style="background:none;border:none;font-size:13px;line-height:1;">×</button>
                     </span>`;
             });
 
@@ -1327,11 +1392,47 @@
             renderRecentEntries();
         }
 
-        function editRecord(uid) {
-            if (appSettings.editPass) {
+        // === Prev/Next navigation state ===
+        let _sortedRegisterIds = [];
+        let _editAuthenticated = false;
+
+        function _showNavButtons(currentId) {
+            let idx = _sortedRegisterIds.indexOf(Number(currentId));
+            let total = _sortedRegisterIds.length;
+            let prevBtn = document.getElementById('btnPrevRecord');
+            let nextBtn = document.getElementById('btnNextRecord');
+            let info   = document.getElementById('navRecordInfo');
+            if (total > 1 && idx !== -1) {
+                prevBtn.classList.remove('hidden');
+                nextBtn.classList.remove('hidden');
+                info.classList.remove('hidden');
+                info.textContent = (idx + 1) + ' / ' + total;
+                prevBtn.style.opacity = idx === 0 ? '0.4' : '1';
+                prevBtn.disabled = idx === 0;
+                nextBtn.style.opacity = idx === total - 1 ? '0.4' : '1';
+                nextBtn.disabled = idx === total - 1;
+            } else {
+                prevBtn.classList.add('hidden');
+                nextBtn.classList.add('hidden');
+                info.classList.add('hidden');
+            }
+        }
+
+        function navigateRecord(dir) {
+            let currentId = parseInt(document.getElementById('f_edit_id').value);
+            let idx = _sortedRegisterIds.indexOf(currentId);
+            if (idx === -1) return;
+            let newIdx = idx + dir;
+            if (newIdx < 0 || newIdx >= _sortedRegisterIds.length) return;
+            editRecord(_sortedRegisterIds[newIdx], true);
+        }
+
+        function editRecord(uid, skipAuth) {
+            if (!skipAuth && appSettings.editPass) {
                 let pwd = prompt("🔒 એડિટ કરવા માટે પાસવર્ડ નાખો:");
                 if (pwd !== appSettings.editPass) { alert("❌ ખોટો પાસવર્ડ!"); return; }
             }
+            _editAuthenticated = true;
             let rec = mainRecords.find(r => r.id == uid);
             if(!rec) return;
 
@@ -1365,14 +1466,19 @@
                     }
                 });
                 updateCharniTotal();
+                _showNavButtons(rec.id);
             }, 50);
         }
 
         function clearForm() {
+            _editAuthenticated = false;
             document.getElementById('f_edit_id').value = "";
             document.getElementById('formTitle').innerText = "📝 દૈનિક કાપન ડેટા એન્ટ્રી ફોર્મ";
             document.getElementById('editModeBadge').classList.add('hidden');
             document.getElementById('btnCancelEdit').classList.add('hidden');
+            document.getElementById('btnPrevRecord').classList.add('hidden');
+            document.getElementById('btnNextRecord').classList.add('hidden');
+            document.getElementById('navRecordInfo').classList.add('hidden');
             document.getElementById('btnSubmitForm').innerText = "📥 કાપન ડેટા સબમિટ કરો";
 
             document.getElementById('f_kapan').value = "";
@@ -1419,9 +1525,9 @@
                 }
                 return `<td style="background:#f8fafc;color:#cbd5e1;border:1px solid #e2e8f0;text-align:center;padding:2px 5px;">-</td>`;
             }).join('');
-            let actionsHtml = showActions ? `<td style="border:1px solid ${pal.border};padding:2px 5px;text-align:center;white-space:nowrap;">
-                <button onclick="event.stopPropagation();editRecord(${rec.id})" style="color:#2563eb;font-weight:700;font-size:14px;background:none;border:none;cursor:pointer;">📝</button>
-                <button onclick="event.stopPropagation();deleteRecord(${rec.id})" style="color:#ef4444;font-weight:700;font-size:14px;background:none;border:none;cursor:pointer;">❌</button>
+            let actionsHtml = showActions ? `<td style="border:1px solid ${pal.border};padding:3px 6px;text-align:center;white-space:nowrap;">
+                <button onclick="event.stopPropagation();editRecord(${rec.id})" style="background:#2563eb;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border:none;border-radius:5px;cursor:pointer;margin-bottom:2px;">✏️ એડિટ</button><br>
+                <button onclick="event.stopPropagation();deleteRecord(${rec.id})" style="background:#ef4444;color:#fff;font-weight:700;font-size:11px;padding:3px 8px;border:none;border-radius:5px;cursor:pointer;">🗑 ડિલીટ</button>
             </td>` : '';
             let isMobile = currentViewMode === 'mobile';
             let stickyCol2 = isMobile ? '' : `position:sticky;left:113px;z-index:2;background:${pal.bg};`;
@@ -1544,8 +1650,10 @@
                 return;
             }
 
+            _sortedRegisterIds = [];
             activeArticles.forEach(artName => {
                 let filteredRecords = sortRecords(baseRecords.filter(r => r.articleName === artName));
+                filteredRecords.forEach(r => _sortedRegisterIds.push(r.id));
                 let articleObj = articleMaster.find(a => a.name === artName);
                 let activeCharnisList = articleObj ? articleObj.charnis.map(c => c.name) : ["+000 TO -1", "+1 TO -2", "+2 TO -5", "+5 TO -7", "+7"];
 
@@ -3377,7 +3485,7 @@
             if (isError) console.error('Firebase:', text);
         }
 
-        function fbConnect() {
+        async function fbConnect() {
             if (fbConnected) { fbUpdateStatus('✅ Already connected'); return; }
             let cfg = fbGetConfig();
             if (!cfg.apiKey || !cfg.projectId || !cfg.databaseURL) {
@@ -3386,7 +3494,7 @@
             }
             fbUpdateStatus('🔄 Connecting...');
             try {
-                if (firebase.apps.length) firebase.app().delete();
+                if (firebase.apps.length) await firebase.app().delete();
             } catch(e) {}
             try {
                 fbApp = firebase.initializeApp(cfg);
