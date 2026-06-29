@@ -3443,9 +3443,10 @@
                     let remoteTime = remote.lastUpdated || 0;
                     if (remoteTime > localTime) {
                         fbUpdateStatus('🔄 Remote data detected! Importing...');
-                        if (remote.mainRecords) mainRecords = remote.mainRecords;
-                        if (remote.charniMaster) { charniMaster = remote.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
-                        if (remote.articleMaster) { articleMaster = remote.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                        let clean = fbDesanitizeKeys(remote);
+                        if (clean.mainRecords) mainRecords = clean.mainRecords;
+                        if (clean.charniMaster) { charniMaster = clean.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
+                        if (clean.articleMaster) { articleMaster = clean.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
                         saveRecords();
                         renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                         _ls('set','fb_last_sync', Date.now().toString());
@@ -3459,16 +3460,43 @@
             fbSyncTimer = setInterval(() => { fbPushData(); }, 30000);
         }
 
+        // Sanitize Firebase keys: replace invalid chars (., #, $, /, [, ])
+        function fbSanitizeKeys(obj) {
+            if (Array.isArray(obj)) return obj.map(fbSanitizeKeys);
+            if (obj !== null && typeof obj === 'object') {
+                let out = {};
+                for (let k in obj) {
+                    let safeKey = k.replace(/\./g,'·').replace(/#/g,'♯').replace(/\$/g,'＄').replace(/\//g,'⁄').replace(/\[/g,'❲').replace(/\]/g,'❳');
+                    out[safeKey] = fbSanitizeKeys(obj[k]);
+                }
+                return out;
+            }
+            return obj;
+        }
+        function fbDesanitizeKeys(obj) {
+            if (Array.isArray(obj)) return obj.map(fbDesanitizeKeys);
+            if (obj !== null && typeof obj === 'object') {
+                let out = {};
+                for (let k in obj) {
+                    let origKey = k.replace(/·/g,'.').replace(/♯/g,'#').replace(/＄/g,'$').replace(/⁄/g,'/').replace(/❲/g,'[').replace(/❳/g,']');
+                    out[origKey] = fbDesanitizeKeys(obj[k]);
+                }
+                return out;
+            }
+            return obj;
+        }
+
         async function fbPushData() {
             if (!fbDb || !fbConnected) return;
             try {
                 let ref = fbDb.ref('diamond_erp/mainData');
-                await ref.update({
+                let safeData = fbSanitizeKeys({
                     mainRecords: mainRecords,
                     charniMaster: charniMaster,
                     articleMaster: articleMaster,
                     lastUpdated: Date.now()
                 });
+                await ref.update(safeData);
                 _ls('set','fb_last_sync', Date.now().toString());
                 fbUpdateStatus('✅ Data synced to cloud');
             } catch(e) {
@@ -3486,9 +3514,10 @@
                         if (data && data.mainRecords && data.lastUpdated) {
                             let localTime = parseInt(_ls('get','fb_last_sync') || '0');
                             if (data.lastUpdated > localTime) {
-                                mainRecords = data.mainRecords;
-                                if (data.charniMaster) { charniMaster = data.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
-                                if (data.articleMaster) { articleMaster = data.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                                let clean = fbDesanitizeKeys(data);
+                                mainRecords = clean.mainRecords;
+                                if (clean.charniMaster) { charniMaster = clean.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
+                                if (clean.articleMaster) { articleMaster = clean.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
                                 saveRecords();
                                 renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                             }
