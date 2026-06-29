@@ -4,6 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>નિર્ભય જેમ્સ ERP - Advanced Edit Panel</title>
+    <!-- Tailwind CSS for utility styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Configuration for Font Family -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- External libraries required for Excel and PDF Export / Capturing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* iOS compatibility fixes */
         input, select, textarea, button { -webkit-appearance: none; appearance: none; border-radius: 8px; touch-action: manipulation; }
@@ -90,13 +117,6 @@
             .register-table-wrap td { padding: 1px 2px; font-size: 8px; }
         }
     </style>
-    <!-- ✅ Required Libraries -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <noscript><div style="position:fixed;inset:0;background:#1e293b;color:#fff;display:flex;align-items:center;justify-content:center;z-index:9999;font-size:18px;padding:20px;text-align:center;">⚠️ કૃપા કરીને JavaScript ચાલુ કરો / Please enable JavaScript</div></noscript>
 <body class="p-3 font-sans text-gray-800" style="background:#f1f5f9;background-image:repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(59,130,246,0.03) 40px,rgba(59,130,246,0.03) 80px),repeating-linear-gradient(-45deg,transparent,transparent 40px,rgba(59,130,246,0.03) 40px,rgba(59,130,246,0.03) 80px);">
@@ -628,10 +648,18 @@
     <!-- 🏆 BEST KAPAN REPORT TAB -->
     <div id="tab-bestkapan" class="tab-content hidden bg-white p-4 rounded-xl shadow-lg mt-2">
 
-        <div class="bg-emerald-700 text-white px-4 py-3 rounded-t-xl flex items-center justify-between mb-4">
+        <div class="bg-emerald-700 text-white px-4 py-3 rounded-t-xl flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
                 <h2 class="text-base font-black uppercase tracking-wide">🏆 બેસ્ટ કાપન રિપોર્ટ</h2>
-                <p class="text-xs opacity-75 mt-0.5">બધા કાપન પૈકી સૌથી ઓછા ડિફરન્સવાળા ટોપ કાપન — નફાકારકતા ક્રમમાં</p>
+                <p class="text-xs opacity-75 mt-0.5">⭐ પોલીશ એવરેજ પ્રમાણે ટોપ 5</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="downloadBestKapanExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
+                    📊 Excel ડાઉનલોડ
+                </button>
+                <button onclick="downloadBestKapanPDF(this)" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
+                    📄 PDF ડાઉનલોડ કરો
+                </button>
             </div>
         </div>
 
@@ -647,6 +675,80 @@
 
 
     </div><!-- /main container -->
+
+    <!-- 🧮 CHARNI CALCULATOR MODAL -->
+    <div id="charniCalcModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🧮</span>
+                    <span class="font-black text-sm uppercase tracking-wide">ચાલની કેલ્ક્યુલેટર / Charni Calculator</span>
+                </div>
+                <button onclick="closeCharniCalcModal()" class="text-white hover:text-red-400 font-black text-xl cursor-pointer leading-none">✕</button>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="p-5 space-y-5 overflow-y-auto max-h-[75vh]" style="-webkit-overflow-scrolling: touch;">
+                <!-- Top Summary Cards (4 Grid) -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">કાપન નંબર</span>
+                        <span id="cc_kapan" class="text-sm font-black text-slate-800">-</span>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase">આર્ટીકલ</span>
+                        <span id="cc_article" class="text-sm font-black text-slate-800 truncate block">-</span>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-100 p-3 rounded-xl">
+                        <span class="block text-[10px] font-bold text-blue-400 uppercase">ફાઈનલ પડતર</span>
+                        <span id="cc_padtar" class="text-sm font-black text-blue-800">-</span>
+                    </div>
+                    <div id="cc_diff_card" class="p-3 rounded-xl border">
+                        <span class="block text-[10px] font-bold uppercase text-slate-400">ડિફરન્સ</span>
+                        <span id="cc_diff" class="text-sm font-black">-</span>
+                    </div>
+                </div>
+                
+                <!-- Charni Checkboxes List -->
+                <div>
+                    <span class="block text-xs font-black text-slate-700 uppercase mb-2">📋 ચાલની પસંદ કરો (Select Charnis)</span>
+                    <div id="cc_charni_list" class="space-y-2 bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-48 overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                        <!-- Checkboxes will be populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Calculator Results Card -->
+                <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2.5">
+                    <span class="block text-xs font-black text-slate-400 uppercase tracking-wide">📊 ગણતરી પરિણામ (Calculated Result)</span>
+                    <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-800 pt-3">
+                        <div>
+                            <span class="block text-[10px] text-slate-400 font-bold uppercase">કુલ ટકા (%)</span>
+                            <span id="cc_res_percent" class="text-base font-black text-yellow-300">0.00%</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] text-slate-400 font-bold uppercase">કુલ રુ. (₹)</span>
+                            <span id="cc_res_rupees" class="text-base font-black text-emerald-400">₹0</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] text-slate-400 font-bold uppercase">સરેરાશ ભાવ</span>
+                            <span id="cc_res_avg_rate" class="text-base font-black text-cyan-400">₹0/ct</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="bg-slate-50 border-t border-slate-200 px-5 py-3.5 flex justify-end gap-3">
+                <button onclick="clearCharniCalcSelection()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-black py-2 px-6 rounded-lg text-xs cursor-pointer transition-all">
+                    🧹 ક્લિયર
+                </button>
+                <button onclick="closeCharniCalcModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-black py-2 px-6 rounded-lg text-xs cursor-pointer transition-all">
+                    🚪 બંધ કરો
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // 🛡️ Safe localStorage (iOS private mode throws errors)
@@ -1121,7 +1223,7 @@
                 <button onclick="event.stopPropagation();editRecord(${rec.id})" style="color:#2563eb;font-weight:700;font-size:14px;background:none;border:none;cursor:pointer;">📝</button>
                 <button onclick="event.stopPropagation();deleteRecord(${rec.id})" style="color:#ef4444;font-weight:700;font-size:14px;background:none;border:none;cursor:pointer;">❌</button>
             </td>` : '';
-            return `<tr class="register-data-row" data-row-id="${rec.id}"
+            return `<tr class="register-data-row" data-row-id="${rec.id}" onclick="toggleRowSelect(this)" ondblclick="openCharniCalcModal(${rec.id})"
                 style="background:${pal.bg};border-bottom:2px solid ${pal.border};cursor:pointer;transition:filter 0.15s;">
                 <td style="position:sticky;left:0;z-index:2;background:${pal.bg};border-right:3px solid ${pal.accent};border-bottom:2px solid ${pal.border};padding:3px 6px;min-width:100px;white-space:nowrap;">
                     <div style="display:flex;align-items:center;gap:4px;">
@@ -1291,7 +1393,7 @@
             // Per article: top 5 with smallest abs difference — full detail like dashboard
             Object.keys(articleGroups).sort().forEach(artName => {
                 let records = articleGroups[artName];
-                let sorted = [...records].sort((a, b) => Math.abs(a.difference || 0) - Math.abs(b.difference || 0));
+                let sorted = [...records].sort((a, b) => (b.polishAverage || 0) - (a.polishAverage || 0));
                 let top5 = sorted.slice(0, 5);
                 let articleObj = articleMaster.find(a => a.name === artName);
                 let activeCharnisList = articleObj ? articleObj.charnis.map(c => c.name) : ["+000 TO -1", "+1 TO -2", "+2 TO -5", "+5 TO -7", "+7"];
@@ -1302,7 +1404,7 @@
                 <div class="bg-white border-2 border-emerald-200 rounded-xl overflow-hidden shadow-sm">
                     <div class="bg-emerald-800 text-white px-4 py-2.5 text-xs font-black uppercase tracking-wide flex items-center justify-between">
                         <span>📦 ${artName}</span>
-                        <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded">ટોપ ${Math.min(5, records.length)} / ${records.length}</span>
+                        <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded">⭐ પોલીશ એવરેજ પ્રમાણે ટોપ 5</span>
                     </div>
                     <div style="overflow-x:auto;">
                         <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -1344,18 +1446,113 @@
             });
         }
 
-        function downloadRegisterExcel() {
+        async function downloadRegisterExcel() {
             let records = getCurrentFilteredRecords();
-            if(records.length === 0) { alert("⚠️ ડાઉનલોડ કરવા માટે કોઈ ડેટા નથી!"); return; }
-            let wb = XLSX.utils.book_new();
+            if (records.length === 0) { alert("⚠️ ડાઉનલોડ કરવા માટે કોઈ ડેટા નથી!"); return; }
+
+            const wb = new ExcelJS.Workbook();
             let articleGroups = [...new Set(records.map(r => r.articleName))];
+
             articleGroups.forEach(artName => {
-                let rows = records.filter(r => r.articleName === artName).map(recordToExportRow);
-                let sheetData = [exportColumnHeaders, ...rows];
-                let ws = XLSX.utils.aoa_to_sheet(sheetData);
-                XLSX.utils.book_append_sheet(wb, ws, artName.substring(0, 31));
+                let recs = records.filter(r => r.articleName === artName);
+                
+                // Find all charnis that exist in these records
+                let charniSet = new Set();
+                recs.forEach(r => { if (r.charniMap) Object.keys(r.charniMap).forEach(c => charniSet.add(c)); });
+                let charnis = [...charniSet];
+
+                let ws = wb.addWorksheet(artName.substring(0, 31));
+
+                // Table Headers
+                let headers = [...exportColumnHeaders, ...charnis];
+                let headerRow = ws.addRow(headers);
+
+                // Style Header
+                headerRow.eachCell((cell) => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; // Dark blue
+                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                });
+
+                // Add rows
+                recs.forEach((r, idx) => {
+                    let baseData = recordToExportRow(r);
+                    let charniData = charnis.map(ch => r.charniMap && r.charniMap[ch] ? `${r.charniMap[ch].percentage}%` : '-');
+                    let rowData = [...baseData, ...charniData];
+                    
+                    let row = ws.addRow(rowData);
+                    let isEven = idx % 2 === 0;
+                    let rowBg = isEven ? 'FFF8FAFC' : 'FFFFFFFF'; // Zebra striping
+
+                    row.eachCell((cell, col) => {
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        
+                        // Default fill
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBg } };
+                        cell.font = { size: 9 };
+
+                        // Custom styles per column
+                        if (col === 1) { // Kapan
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+                            cell.font = { bold: true, size: 9 };
+                        } else if (col === 2) { // Planning vigat
+                            cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                        } else if (col === 7) { // Rough Rupees
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEDD5' } }; // light orange
+                            cell.font = { bold: true, color: { argb: 'FFC2410C' }, size: 9 };
+                        } else if (col === 9) { // bnavavani size
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAF5FF' } }; // light violet
+                            cell.font = { bold: true, color: { argb: 'FF7E22CE' }, size: 9 };
+                        } else if (col === 10) { // R TO SIZE
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } }; // light blue
+                            cell.font = { bold: true, color: { argb: 'FF1E40AF' }, size: 9 };
+                        } else if (col === 12) { // Total Majuri
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDF2F8' } }; // light pink
+                            cell.font = { bold: true, color: { argb: 'FF7E22CE' }, size: 9 };
+                        } else if (col === 14) { // Mangelu Polish weight
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } }; // light green
+                            cell.font = { bold: true, color: { argb: 'FF14532D' }, size: 9 };
+                        } else if (col === 19) { // Final Padtar
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF134E4A' } }; // Dark teal
+                            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 };
+                        } else if (col === 20) { // Polish Average
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E1B4B' } }; // Dark indigo
+                            cell.font = { bold: true, color: { argb: 'FFC7D2FE' }, size: 9 };
+                        } else if (col === 21) { // Difference
+                            let val = parseFloat(cell.value) || 0;
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: val >= 0 ? 'FFD1FAE5' : 'FFFEE2E2' } };
+                            cell.font = { bold: true, color: { argb: val >= 0 ? 'FF065F46' : 'FF991B1B' }, size: 9 };
+                        } else if (col > 22) { // Charni columns
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFEFF' } }; // light cyan
+                            cell.font = { bold: true, color: { argb: 'FF164E63' }, size: 9 };
+                        }
+                    });
+                });
+
+                // Auto-fit columns
+                ws.columns.forEach((col, cIdx) => {
+                    let maxLen = 0;
+                    col.eachCell({ includeEmpty: true }, (cell) => {
+                        let valStr = cell.value ? cell.value.toString() : '';
+                        if (valStr.length > maxLen) maxLen = valStr.length;
+                    });
+                    col.width = Math.max(maxLen + 4, 12);
+                });
+                ws.getColumn(2).width = 24; // planning detail is longer
             });
-            XLSX.writeFile(wb, `Diamond_Register_${new Date().toISOString().slice(0,10)}.xlsx`);
+
+            const buf = await wb.xlsx.writeBuffer();
+            let blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = `Diamond_Register_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
         }
 
         async function captureNodeCanvas(node) {
@@ -1485,11 +1682,19 @@
                             20: { fillColor: [127, 29, 29], textColor: 255, fontStyle: 'bold' },
                         },
                         didParseCell: function(data) {
+                            if (data.section !== 'body') return;
                             // Color difference column green/red
-                            if (data.column.index === 20 && data.section === 'body') {
+                            if (data.column.index === 20) {
                                 let val = parseFloat(data.cell.raw) || 0;
                                 data.cell.styles.fillColor = val >= 0 ? [209, 250, 229] : [254, 226, 226];
                                 data.cell.styles.textColor = val >= 0 ? [6, 95, 70] : [153, 27, 27];
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                            // Color charni cells light cyan
+                            if (data.column.index > 20 && data.cell.raw !== '-') {
+                                data.cell.styles.fillColor = [236, 254, 255];
+                                data.cell.styles.textColor = [22, 78, 99];
+                                data.cell.styles.fontStyle = 'bold';
                             }
                         },
                         alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -1499,6 +1704,236 @@
                 });
 
                 pdf.save(`Register_${new Date().toISOString().slice(0,10)}.pdf`);
+            } catch(err) {
+                alert('PDF Error: ' + err.message);
+            } finally {
+                btnEl.innerHTML = '📄 PDF ડાઉનલોડ કરો';
+                btnEl.disabled = false;
+            }
+        }
+
+        async function downloadBestKapanExcel() {
+            if (mainRecords.length === 0) { alert("⚠️ ડાઉનલોડ કરવા માટે કોઈ ડેટા નથી!"); return; }
+
+            const wb = new ExcelJS.Workbook();
+            
+            // Group records by article
+            let articleGroups = {};
+            mainRecords.forEach(r => {
+                let a = r.articleName || 'Unknown';
+                if (!articleGroups[a]) articleGroups[a] = [];
+                articleGroups[a].push(r);
+            });
+
+            Object.keys(articleGroups).sort().forEach(artName => {
+                let records = articleGroups[artName];
+                let sorted = [...records].sort((a, b) => (b.polishAverage || 0) - (a.polishAverage || 0));
+                let recs = sorted.slice(0, 5);
+                
+                // Find all charnis that exist in these records
+                let charniSet = new Set();
+                recs.forEach(r => { if (r.charniMap) Object.keys(r.charniMap).forEach(c => charniSet.add(c)); });
+                let charnis = [...charniSet];
+
+                let ws = wb.addWorksheet(artName.substring(0, 31));
+
+                // Table Headers
+                let headers = [...exportColumnHeaders, ...charnis];
+                let headerRow = ws.addRow(headers);
+
+                // Style Header
+                headerRow.eachCell((cell) => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF065F46' } }; // Dark Emerald
+                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                });
+
+                // Add rows
+                recs.forEach((r, idx) => {
+                    let baseData = recordToExportRow(r);
+                    let charniData = charnis.map(ch => r.charniMap && r.charniMap[ch] ? `${r.charniMap[ch].percentage}%` : '-');
+                    let rowData = [...baseData, ...charniData];
+                    
+                    let row = ws.addRow(rowData);
+                    let isEven = idx % 2 === 0;
+                    let rowBg = isEven ? 'FFF8FAFC' : 'FFFFFFFF'; // Zebra striping
+
+                    row.eachCell((cell, col) => {
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        
+                        // Default fill
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBg } };
+                        cell.font = { size: 9 };
+
+                        // Custom styles per column
+                        if (col === 1) { // Kapan
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+                            cell.font = { bold: true, size: 9 };
+                        } else if (col === 2) { // Planning vigat
+                            cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                        } else if (col === 7) { // Rough Rupees
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEDD5' } }; // light orange
+                            cell.font = { bold: true, color: { argb: 'FFC2410C' }, size: 9 };
+                        } else if (col === 9) { // bnavavani size
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAF5FF' } }; // light violet
+                            cell.font = { bold: true, color: { argb: 'FF7E22CE' }, size: 9 };
+                        } else if (col === 10) { // R TO SIZE
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } }; // light blue
+                            cell.font = { bold: true, color: { argb: 'FF1E40AF' }, size: 9 };
+                        } else if (col === 12) { // Total Majuri
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDF2F8' } }; // light pink
+                            cell.font = { bold: true, color: { argb: 'FF7E22CE' }, size: 9 };
+                        } else if (col === 14) { // Mangelu Polish weight
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } }; // light green
+                            cell.font = { bold: true, color: { argb: 'FF14532D' }, size: 9 };
+                        } else if (col === 19) { // Final Padtar
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF134E4A' } }; // Dark teal
+                            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 };
+                        } else if (col === 20) { // Polish Average
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E1B4B' } }; // Dark indigo
+                            cell.font = { bold: true, color: { argb: 'FFC7D2FE' }, size: 9 };
+                        } else if (col === 21) { // Difference
+                            let val = parseFloat(cell.value) || 0;
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: val >= 0 ? 'FFD1FAE5' : 'FFFEE2E2' } };
+                            cell.font = { bold: true, color: { argb: val >= 0 ? 'FF065F46' : 'FF991B1B' }, size: 9 };
+                        } else if (col > 22) { // Charni columns
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFEFF' } }; // light cyan
+                            cell.font = { bold: true, color: { argb: 'FF164E63' }, size: 9 };
+                        }
+                    });
+                });
+
+                // Auto-fit columns
+                ws.columns.forEach((col, cIdx) => {
+                    let maxLen = 0;
+                    col.eachCell({ includeEmpty: true }, (cell) => {
+                        let valStr = cell.value ? cell.value.toString() : '';
+                        if (valStr.length > maxLen) maxLen = valStr.length;
+                    });
+                    col.width = Math.max(maxLen + 4, 12);
+                });
+                ws.getColumn(2).width = 24; // planning detail is longer
+            });
+
+            const buf = await wb.xlsx.writeBuffer();
+            let blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = `Best_Kapan_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        async function downloadBestKapanPDF(btnEl) {
+            if (!mainRecords.length) { alert("⚠️ ડેટા નથી!"); return; }
+            btnEl.innerHTML = '⏳ PDF બની રહ્યું છે...';
+            btnEl.disabled = true;
+            try {
+                let { jsPDF } = window.jspdf;
+                let pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a3' });
+                registerGujaratiFont(pdf);
+                pdf.setFont('NotoGuj', 'normal');
+
+                // Group by article
+                let articleGroups = {};
+                mainRecords.forEach(r => {
+                    let a = r.articleName || 'Unknown';
+                    if (!articleGroups[a]) articleGroups[a] = [];
+                    articleGroups[a].push(r);
+                });
+
+                const fixedCols = ['કાપન', 'Planning વિગત', 'કાચા નંગ', 'કાચું વજન', 'કાચી સાઈઝ',
+                    'રફ ભાવ', 'રફ રુ.', 'બ.નંગ', 'બ.સાઈઝ', 'R TO SIZE', 'મજુરી', 'ટો.મજુ',
+                    'માં.રફ%', 'માં.પો.વ', 'વેરિ%', 'ફા.R-P%', 'પો.કેરેટ', 'ફા.રુ.', 'ફા.પડતર', 'પો.એવ.', 'ડિફ.'];
+
+                let isFirst = true;
+                Object.keys(articleGroups).sort().forEach(artName => {
+                    let records = articleGroups[artName];
+                    let sorted = [...records].sort((a, b) => (b.polishAverage || 0) - (a.polishAverage || 0));
+                    let recs = sorted.slice(0, 5);
+
+                    // Find charnis for this article
+                    let charniSet = new Set();
+                    recs.forEach(r => { if (r.charniMap) Object.keys(r.charniMap).forEach(c => charniSet.add(c)); });
+                    let charnis = [...charniSet];
+                    let allCols = [...fixedCols, ...charnis];
+
+                    let head = [allCols];
+                    let body = recs.map(r => {
+                        let row = [
+                            r.kapan || '-',
+                            (r.planningVigat || '-').substring(0, 30),
+                            r.kachaNang || 0,
+                            Number(r.kachuVajan||0).toFixed(2),
+                            Number(r.kachiSize||0).toFixed(2),
+                            r.rafBhav || 0,
+                            Math.round(r.rafRupees||0),
+                            r.bnavavaNang || 0,
+                            r.bnavavaniSize || '-',
+                            Number(r.rafToSize||0).toFixed(2),
+                            r.majuri || 0,
+                            Math.round(r.totalMajuri||0),
+                            r.mangeluRaf || 0,
+                            Number(r.mangeluPolishVajan||0).toFixed(2),
+                            r.variation || 0,
+                            Number(r.finalRafToPolishPer||0).toFixed(2),
+                            Number(r.polishCarat||0).toFixed(2),
+                            Math.round(r.finalRupees||0),
+                            Math.round(r.finalPadtar||0),
+                            Math.round(r.polishAverage||0),
+                            Math.round(r.difference||0),
+                            ...charnis.map(ch => r.charniMap && r.charniMap[ch] ? `${r.charniMap[ch].percentage}%` : '-')
+                        ];
+                        return row;
+                    });
+
+                    if (!isFirst) pdf.addPage();
+                    isFirst = false;
+
+                    pdf.setFont('NotoGuj', 'normal');
+                    pdf.setFontSize(13);
+                    pdf.setTextColor(6, 95, 70); // Emerald-800
+                    pdf.text(`${artName} — Best Kapan (પોલીશ એવરેજ પ્રમાણે ટોપ 5)`, 20, 20);
+
+                    pdf.autoTable({
+                        startY: 30,
+                        head: head,
+                        body: body,
+                        styles: { font: 'NotoGuj', fontSize: 7, cellPadding: 3, halign: 'center', valign: 'middle', overflow: 'linebreak' },
+                        headStyles: { font: 'NotoGuj', fillColor: [6, 95, 70], textColor: 255, fontStyle: 'bold', fontSize: 7 }, // Emerald theme header
+                        columnStyles: {
+                            0: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold', minCellWidth: 50 },
+                            1: { minCellWidth: 70, halign: 'left' },
+                            18: { fillColor: [19, 78, 74], textColor: [153, 246, 228], fontStyle: 'bold' },
+                            19: { fillColor: [30, 27, 75], textColor: [199, 210, 254], fontStyle: 'bold' },
+                            20: { fillColor: [127, 29, 29], textColor: 255, fontStyle: 'bold' },
+                        },
+                        didParseCell: function(data) {
+                            if (data.section !== 'body') return;
+                            if (data.column.index === 20) {
+                                let val = parseFloat(data.cell.raw) || 0;
+                                data.cell.styles.fillColor = val >= 0 ? [209, 250, 229] : [254, 226, 226];
+                                data.cell.styles.textColor = val >= 0 ? [6, 95, 70] : [153, 27, 27];
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                            if (data.column.index > 20 && data.cell.raw !== '-') {
+                                data.cell.styles.fillColor = [236, 254, 255];
+                                data.cell.styles.textColor = [22, 78, 99];
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                        },
+                        alternateRowStyles: { fillColor: [248, 250, 252] },
+                        margin: { top: 10, left: 10, right: 10 },
+                        tableWidth: 'auto',
+                    });
+                });
+
+                pdf.save(`Best_Kapan_Report_${new Date().toISOString().slice(0,10)}.pdf`);
             } catch(err) {
                 alert('PDF Error: ' + err.message);
             } finally {
@@ -2049,20 +2484,54 @@
                 let rData = [m.l, ...sel.map(m.fn)];
                 let row = ws.addRow(rData);
                 row.eachCell((cell, col) => {
-                    if(col === 1) cell.font = {bold:true};
-                    else if(m.isDiff) {
-                        let v = sel[col-2].difference || 0;
-                        cell.fill = {type:'pattern',pattern:'solid',fgColor:{argb:v>=0?'FFD1FAE5':'FFFEE2E2'}};
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                    cell.alignment = { horizontal: col === 1 ? 'left' : 'center', vertical: 'middle' };
+                    
+                    if (col === 1) {
+                        cell.font = { bold: true };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+                    } else {
+                        if (m.l === 'ડિફરન્સ') {
+                            let v = sel[col - 2].difference || 0;
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: v >= 0 ? 'FFD1FAE5' : 'FFFEE2E2' } };
+                            cell.font = { bold: true, color: { argb: v >= 0 ? 'FF065F46' : 'FF991B1B' } };
+                        } else if (m.l === 'ફાઈનલ પડતર') {
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF134E4A' } }; // Dark teal
+                            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                        } else if (m.l === 'પોલીશ એવરેજ') {
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E1B4B' } }; // Dark indigo
+                            cell.font = { bold: true, color: { argb: 'FFC7D2FE' } };
+                        } else {
+                            let bg = i % 2 === 0 ? 'FFF8FAFC' : 'FFFFFFFF';
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+                        }
                     }
                 });
             });
 
             if(allCharnis.length) {
                 ws.addRow([]);
-                ws.addRow(['Dynamic Charni Section']);
+                let subHdr = ws.addRow(['Dynamic Charni Section']);
+                subHdr.eachCell(cell => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+                    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                });
                 allCharnis.forEach(ch => {
-                    let rData = [ch, ...sel.map(r => r.charniMap && r.charniMap[ch] ? `${r.charniMap[ch].percentage}% (₹${r.charniMap[ch].rupees})` : '-')];
-                    ws.addRow(rData);
+                    let rData = [ch, ...sel.map(r => r.charniMap && r.charniMap[ch] ? `${r.charniMap[ch].percentage}% (₹${Math.round(r.charniMap[ch].rupees)})` : '-')];
+                    let row = ws.addRow(rData);
+                    row.eachCell((cell, col) => {
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        cell.alignment = { horizontal: col === 1 ? 'left' : 'center', vertical: 'middle' };
+                        
+                        if (col === 1) {
+                            cell.font = { bold: true };
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+                        } else {
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFEFF' } }; // light cyan
+                            cell.font = { color: { argb: 'FF164E63' }, bold: true };
+                        }
+                    });
                 });
             }
 
@@ -2084,7 +2553,7 @@
                 let { jsPDF } = window.jspdf;
                 let pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a3' });
                 registerGujaratiFont(pdf);
-
+                pdf.setFont('NotoGuj', 'normal');
                 pdf.setFontSize(14);
                 pdf.setTextColor(30, 58, 138);
                 pdf.text('કાપન કમ્પેરિઝન રિપોર્ટ — Side by Side Matrix', 20, 20);
@@ -2150,6 +2619,12 @@
                             let val = sel[recIdx] ? (sel[recIdx].difference || 0) : 0;
                             data.cell.styles.fillColor = val >= 0 ? [209, 250, 229] : [254, 226, 226];
                             data.cell.styles.textColor = val >= 0 ? [6, 95, 70] : [153, 27, 27];
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                        // Charni rows
+                        if (allCharnis.includes(rowLabel) && data.column.index > 0 && data.cell.raw !== '-') {
+                            data.cell.styles.fillColor = [236, 254, 255];
+                            data.cell.styles.textColor = [22, 78, 99];
                             data.cell.styles.fontStyle = 'bold';
                         }
                     },
@@ -2222,12 +2697,33 @@
                 row.eachCell((cell, col) => {
                     cell.alignment = { horizontal: col === 1 ? 'left' : 'center', vertical: 'middle' };
                     cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
-                    if (col === 1) { cell.font = { bold: true }; cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFe2e8f0'} }; }
-                    else { cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:bg} }; }
-                    // Color difference column
+                    
+                    if (col === 1) {
+                        cell.font = { bold: true };
+                        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFe2e8f0'} };
+                    } else {
+                        // Default background fill
+                        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:bg} };
+                        
+                        let label = rowData[0];
+                        if (label === 'ડિફરન્સ (₹)') {
+                            let val = rowData[col - 1]; // cell value (r.difference or liveDiff)
+                            cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb: val >= 0 ? 'FFd1fae5' : 'FFfee2e2'} };
+                            cell.font = { bold: true, color: { argb: val >= 0 ? 'FF065f46' : 'FF991b1b' } };
+                        } else if (label === 'ફાઈનલ પડતર (₹)') {
+                            cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF134E4A'} }; // dark teal
+                            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                        } else if (label === 'પોલીશ એવરેજ (₹)') {
+                            cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FF1E1B4B'} }; // dark indigo
+                            cell.font = { bold: true, color: { argb: 'FFC7D2FE' } };
+                        }
+                    }
+                    
+                    // Highlight the difference column explicitly
                     if (col === 4 && typeof rowData[3] === 'number' && rowData[0] !== 'કાપન નંબર' && rowData[0] !== 'આર્ટીકલ') {
-                        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb: rowData[3] >= 0 ? 'FFd1fae5' : 'FFfee2e2'} };
-                        cell.font = { bold: true, color: { argb: rowData[3] >= 0 ? 'FF065f46' : 'FF991b1b' } };
+                        let diffVal = rowData[3];
+                        cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb: diffVal >= 0 ? 'FFd1fae5' : 'FFfee2e2'} };
+                        cell.font = { bold: true, color: { argb: diffVal >= 0 ? 'FF065f46' : 'FF991b1b' } };
                     }
                 });
             });
@@ -2242,7 +2738,19 @@
                     cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
                 });
                 Object.entries(r.charniMap).forEach(([ch, cd]) => {
-                    ws.addRow([ch, `${cd.percentage}%`, `₹${Math.round(cd.rupees)}`, `₹${newCharniBhavs[ch] || '-'}`]);
+                    let row = ws.addRow([ch, `${cd.percentage}%`, `₹${Math.round(cd.rupees)}`, `₹${newCharniBhavs[ch] || '-'}`]);
+                    row.eachCell((cell, col) => {
+                        cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
+                        cell.alignment = { horizontal: col === 1 ? 'left' : 'center', vertical: 'middle' };
+                        
+                        if (col === 1) {
+                            cell.font = { bold: true };
+                            cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFe2e8f0'} };
+                        } else {
+                            cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFECFEFF'} }; // light cyan
+                            cell.font = { color: { argb: 'FF164E63' }, bold: true };
+                        }
+                    });
                 });
             }
 
@@ -2284,6 +2792,7 @@
                 let { jsPDF } = window.jspdf;
                 let pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
                 registerGujaratiFont(pdf);
+                pdf.setFont('NotoGuj', 'normal');
                 pdf.setFontSize(13); pdf.setTextColor(30, 58, 138);
                 pdf.text(`ભાવ એડિટ સરખામણી — કાપન: ${r.kapan} (${r.articleName})`, 20, 18);
 
@@ -2305,13 +2814,37 @@
                     headStyles: { font: 'NotoGuj', fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
                     columnStyles: { 0: { halign: 'left', fillColor: [226, 232, 240], fontStyle: 'bold' } },
                     didParseCell: function(data) {
-                        if (data.section === 'body' && data.column.index === 3) {
-                            let raw = data.cell.raw;
-                            if (typeof raw === 'number' && data.row.index >= 2) {
-                                data.cell.styles.fillColor = raw >= 0 ? [209, 250, 229] : [254, 226, 226];
-                                data.cell.styles.textColor = raw >= 0 ? [6, 95, 70] : [153, 27, 27];
-                                data.cell.styles.fontStyle = 'bold';
-                            }
+                        if (data.section !== 'body') return;
+                        
+                        let rowIndex = data.row.index;
+                        let colIndex = data.column.index;
+                        
+                        // Style Padtar row
+                        if (rowIndex === 4 && colIndex > 0) {
+                            data.cell.styles.fillColor = [19, 78, 74];
+                            data.cell.styles.textColor = [255, 255, 255];
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                        // Style Average row
+                        if (rowIndex === 5 && colIndex > 0) {
+                            data.cell.styles.fillColor = [30, 27, 75];
+                            data.cell.styles.textColor = [199, 210, 254];
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                        // Style Difference row
+                        if (rowIndex === 6 && colIndex > 0) {
+                            let raw = parseFloat(data.cell.raw) || 0;
+                            data.cell.styles.fillColor = raw >= 0 ? [209, 250, 229] : [254, 226, 226];
+                            data.cell.styles.textColor = raw >= 0 ? [6, 95, 70] : [153, 27, 27];
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                        
+                        // Style Difference column in the difference column (col index 3)
+                        if (colIndex === 3 && rowIndex >= 2 && rowIndex <= 3) {
+                            let raw = parseFloat(data.cell.raw) || 0;
+                            data.cell.styles.fillColor = raw >= 0 ? [209, 250, 229] : [254, 226, 226];
+                            data.cell.styles.textColor = raw >= 0 ? [6, 95, 70] : [153, 27, 27];
+                            data.cell.styles.fontStyle = 'bold';
                         }
                     },
                     margin: { left: 20, right: 20 },
@@ -2327,6 +2860,14 @@
                         body: charniRows,
                         styles: { font: 'NotoGuj', fontSize: 9, cellPadding: 4, halign: 'center' },
                         headStyles: { font: 'NotoGuj', fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold' },
+                        columnStyles: { 0: { halign: 'left', fillColor: [226, 232, 240], fontStyle: 'bold' } },
+                        didParseCell: function(data) {
+                            if (data.section === 'body' && data.column.index > 0 && data.cell.raw !== '-') {
+                                data.cell.styles.fillColor = [236, 254, 255];
+                                data.cell.styles.textColor = [22, 78, 99];
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                        },
                         margin: { left: 20, right: 20 },
                     });
                 }
@@ -2445,10 +2986,12 @@
             el.type = el.type === 'password' ? 'text' : 'password';
         }
 
-        // Close modal on backdrop click
+        // Close modals on backdrop click
         document.addEventListener('click', function(e) {
-            let modal = document.getElementById('settingsModal');
-            if (e.target === modal) closeSettings();
+            let settingsModal = document.getElementById('settingsModal');
+            if (e.target === settingsModal) closeSettings();
+            let charniCalcModal = document.getElementById('charniCalcModal');
+            if (e.target === charniCalcModal) closeCharniCalcModal();
         });
 
         // Override deleteRecord to use dynamic password from settings
@@ -2784,6 +3327,107 @@
             }
             document.getElementById('aiSuggestionBox').classList.add('hidden');
             document.getElementById('f_kapan').focus();
+        }
+
+        // ============================================================
+        // 🧮 CHARNI CALCULATOR MODAL CONTROLLER
+        // ============================================================
+        let ccCurrentRecord = null;
+
+        function openCharniCalcModal(uid) {
+            let rec = mainRecords.find(r => r.id == uid);
+            if (!rec) return;
+            ccCurrentRecord = rec;
+
+            // Populate top summary cards
+            document.getElementById('cc_kapan').innerText = rec.kapan || '-';
+            document.getElementById('cc_article').innerText = rec.articleName || '-';
+            document.getElementById('cc_padtar').innerText = '₹' + Math.round(rec.finalPadtar).toLocaleString('en-IN');
+            
+            let diffVal = Math.round(rec.difference || 0);
+            let diffSign = diffVal >= 0 ? '+' : '';
+            let diffText = diffSign + '₹' + diffVal.toLocaleString('en-IN');
+            let diffEl = document.getElementById('cc_diff');
+            let diffCard = document.getElementById('cc_diff_card');
+            diffEl.innerText = diffText;
+            if (diffVal >= 0) {
+                diffEl.style.color = '#065f46';
+                diffCard.style.backgroundColor = '#d1fae5';
+                diffCard.style.borderColor = '#34d399';
+            } else {
+                diffEl.style.color = '#991b1b';
+                diffCard.style.backgroundColor = '#fee2e2';
+                diffCard.style.borderColor = '#f87171';
+            }
+
+            // Populate charni checkboxes list
+            let listContainer = document.getElementById('cc_charni_list');
+            listContainer.innerHTML = '';
+            
+            let articleObj = articleMaster.find(a => a.name === rec.articleName);
+            
+            if (rec.charniMap && Object.keys(rec.charniMap).length > 0) {
+                Object.entries(rec.charniMap).forEach(([chName, cellData]) => {
+                    let chRate = cellData.bhav || (articleObj ? (articleObj.charnis.find(c => c.name === chName) || {}).bhav : 0);
+                    if (cellData.percentage > 0) {
+                        listContainer.innerHTML += `
+                            <label class="flex items-center justify-between p-2.5 hover:bg-slate-100 rounded-lg cursor-pointer transition-all border border-transparent hover:border-slate-200">
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" class="cc-charni-checkbox w-5 h-5 accent-slate-900 rounded cursor-pointer" data-charni-name="${chName}" data-charni-pct="${cellData.percentage}" data-charni-rupees="${cellData.rupees}" onchange="calculateCharniSelectionTotal()">
+                                    <span class="font-black text-slate-800 text-xs">${chName}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-black text-slate-900 text-xs">${cellData.percentage.toFixed(2)}%</span>
+                                    <span class="block text-[10px] text-slate-500">₹${Math.round(cellData.rupees).toLocaleString('en-IN')} (₹${chRate}/ct)</span>
+                                </div>
+                            </label>
+                        `;
+                    }
+                });
+            } else {
+                listContainer.innerHTML = '<div class="text-center text-xs text-slate-400 py-3 font-medium">આ કાપનમાં ચારણીનો ડેટા નથી.</div>';
+            }
+
+            // Reset results
+            document.getElementById('cc_res_percent').innerText = '0.00%';
+            document.getElementById('cc_res_rupees').innerText = '₹0';
+            document.getElementById('cc_res_avg_rate').innerText = '₹0/ct';
+
+            // Show modal
+            document.getElementById('charniCalcModal').classList.remove('hidden');
+        }
+
+        function closeCharniCalcModal() {
+            document.getElementById('charniCalcModal').classList.add('hidden');
+            ccCurrentRecord = null;
+        }
+
+        function calculateCharniSelectionTotal() {
+            if (!ccCurrentRecord) return;
+            let checkboxes = document.querySelectorAll('.cc-charni-checkbox:checked');
+            let totalPct = 0;
+            let totalRupees = 0;
+            
+            checkboxes.forEach(cb => {
+                totalPct += parseFloat(cb.getAttribute('data-charni-pct')) || 0;
+                totalRupees += parseFloat(cb.getAttribute('data-charni-rupees')) || 0;
+            });
+
+            // Calculate average rate
+            let polishCarat = ccCurrentRecord.polishCarat || 0;
+            let selectedCarat = polishCarat * (totalPct / 100);
+            let avgRate = selectedCarat > 0 ? (totalRupees / selectedCarat) : 0;
+
+            document.getElementById('cc_res_percent').innerText = totalPct.toFixed(2) + '%';
+            document.getElementById('cc_res_rupees').innerText = '₹' + Math.round(totalRupees).toLocaleString('en-IN');
+            document.getElementById('cc_res_avg_rate').innerText = '₹' + Math.round(avgRate).toLocaleString('en-IN') + '/ct';
+        }
+
+        function clearCharniCalcSelection() {
+            document.querySelectorAll('.cc-charni-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            calculateCharniSelectionTotal();
         }
 
         window.onload = function() {
