@@ -1423,6 +1423,8 @@
                 <button onclick="event.stopPropagation();editRecord(${rec.id})" style="color:#2563eb;font-weight:700;font-size:14px;background:none;border:none;cursor:pointer;">📝</button>
                 <button onclick="event.stopPropagation();deleteRecord(${rec.id})" style="color:#ef4444;font-weight:700;font-size:14px;background:none;border:none;cursor:pointer;">❌</button>
             </td>` : '';
+            let isMobile = currentViewMode === 'mobile';
+            let stickyCol2 = isMobile ? '' : `position:sticky;left:113px;z-index:2;background:${pal.bg};`;
             return `<tr class="register-data-row" data-row-id="${rec.id}" onclick="toggleRowSelect(this)" ondblclick="openCharniCalcModal(${rec.id})"
                 style="background:${pal.bg};border-bottom:2px solid ${pal.border};cursor:pointer;transition:filter 0.15s;">
                 <td style="position:sticky;left:0;z-index:2;background:${pal.bg};border-right:3px solid ${pal.accent};border-bottom:2px solid ${pal.border};padding:3px 6px;min-width:100px;white-space:nowrap;">
@@ -1431,7 +1433,7 @@
                         <span style="font-weight:900;color:${pal.accent};font-size:12px;">${rec.kapan}</span>
                     </div>
                 </td>
-                <td style="position:sticky;left:113px;z-index:2;background:${pal.bg};border-right:3px solid ${pal.border};border-bottom:2px solid ${pal.border};padding:3px 6px;min-width:140px;max-width:180px;">
+                <td style="${stickyCol2}border-right:3px solid ${pal.border};border-bottom:2px solid ${pal.border};padding:3px 6px;min-width:140px;max-width:180px;">
                     <div style="font-size:11px;color:#475569;font-weight:600;white-space:normal;line-height:1.3;" title="${rec.planningVigat||'-'}">${rec.planningVigat||'-'}</div>
                 </td>
                 <td style="border:1px solid ${pal.border};padding:2px 5px;text-align:center;white-space:nowrap;">${rec.kachaNang}</td>
@@ -1459,10 +1461,12 @@
         }
 
         function renderFullTableHead(activeCharnisList) {
+            let isMobile = currentViewMode === 'mobile';
+            let stickyCol2 = isMobile ? '' : 'position:sticky;left:113px;z-index:3;';
             return `<thead>
                 <tr style="background:#0f172a;color:#fff;font-size:11px;font-weight:700;">
                     <th style="position:sticky;left:0;z-index:3;background:#1e3a8a;color:#fff;padding:8px;border:1px solid #1e40af;white-space:nowrap;min-width:110px;">કાપન</th>
-                    <th style="position:sticky;left:113px;z-index:3;background:#1e3a8a;color:#e0e7ff;padding:8px;border:1px solid #1e40af;white-space:nowrap;min-width:150px;">Planning વિગત</th>
+                    <th style="${stickyCol2}background:#1e3a8a;color:#e0e7ff;padding:8px;border:1px solid #1e40af;white-space:nowrap;min-width:150px;">Planning વિગત</th>
                     <th style="padding:6px 8px;border:1px solid #334155;white-space:nowrap;">કાચા નંગ</th>
                     <th style="padding:6px 8px;border:1px solid #334155;white-space:nowrap;">કાચું વજન</th>
                     <th style="padding:6px 8px;border:1px solid #334155;white-space:nowrap;">કાચી સાઈઝ</th>
@@ -3456,7 +3460,7 @@
                         renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                         if (typeof cmpInitDropdown === 'function') cmpInitDropdown();
                         if (typeof bestKapanPopulateCharniFilter === 'function') bestKapanPopulateCharniFilter();
-                        _ls('set','fb_last_sync', Date.now().toString());
+                        _ls('set','fb_last_sync', remoteTime.toString());
                         fbUpdateStatus('✅ Cloud data loaded');
                     } else if (remoteTime < localTime) {
                         // Local is newer — push to cloud
@@ -3504,14 +3508,15 @@
             _fbPushing = true;
             try {
                 let ref = fbDb.ref('diamond_erp/mainData');
+                let now = Date.now();
                 let safeData = fbSanitizeKeys({
                     mainRecords: mainRecords,
                     charniMaster: charniMaster,
                     articleMaster: articleMaster,
-                    lastUpdated: Date.now()
+                    lastUpdated: now
                 });
                 await ref.update(safeData);
-                _ls('set','fb_last_sync', Date.now().toString());
+                _ls('set','fb_last_sync', now.toString());
                 fbUpdateStatus('✅ Data synced to cloud');
             } catch(e) {
                 fbUpdateStatus('⚠️ Sync error: ' + e.message, true);
@@ -3536,6 +3541,7 @@
                                 if (clean.articleMaster) { articleMaster = clean.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
                                 saveRecords();
                                 renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
+                                _ls('set','fb_last_sync', data.lastUpdated.toString());
                             }
                         }
                         fbUpdateStatus('✅ Sync complete');
@@ -3694,7 +3700,15 @@
                 root.style.maxWidth = '480px';
                 document.body.style.fontSize = '14px';
                 let tabBar = document.querySelector('.flex.bg-slate-200');
-                if (tabBar) { tabBar.style.flexWrap = 'wrap'; }
+                if (tabBar) { 
+                    tabBar.style.flexWrap = 'nowrap';
+                    tabBar.style.overflowX = 'auto';
+                    tabBar.style.scrollbarWidth = 'none';
+                }
+                document.querySelectorAll('.tab-buttons button').forEach(b => {
+                    b.style.flex = '0 0 auto';
+                    b.style.padding = '8px 12px';
+                });
                 // Force all grids to 2-column
                 document.querySelectorAll('.entry-form-grid').forEach(el => {
                     el.classList.remove('sm:grid-cols-4','md:grid-cols-5','lg:grid-cols-10');
@@ -3711,14 +3725,21 @@
                 root.style.maxWidth = '';
                 document.body.style.fontSize = '';
                 let tabBar = document.querySelector('.flex.bg-slate-200');
-                if (tabBar) tabBar.style.flexWrap = '';
-                document.querySelectorAll('[data-grid-reset]').forEach(el => {
-                    el.classList.add('sm:grid-cols-4','md:grid-cols-5','lg:grid-cols-10');
-                    el.removeAttribute('data-grid-reset');
+                if (tabBar) {
+                    tabBar.style.flexWrap = '';
+                    tabBar.style.overflowX = '';
+                }
+                document.querySelectorAll('.tab-buttons button').forEach(b => {
+                    b.style.flex = '';
+                    b.style.padding = '';
                 });
-                document.querySelectorAll('[data-grid-reset]').forEach(el => {
+                document.querySelectorAll('[data-reset-entry]').forEach(el => {
+                    el.classList.add('sm:grid-cols-4','md:grid-cols-5','lg:grid-cols-10');
+                    el.removeAttribute('data-reset-entry');
+                });
+                document.querySelectorAll('[data-reset-charni]').forEach(el => {
                     el.classList.add('sm:grid-cols-3','md:grid-cols-5','lg:grid-cols-6');
-                    el.removeAttribute('data-grid-reset');
+                    el.removeAttribute('data-reset-charni');
                 });
                 btn.innerHTML = '🖥️ Desktop';
                 btn.classList.replace('bg-purple-600','bg-indigo-600');
@@ -3726,6 +3747,8 @@
             }
             currentViewMode = mode;
             _ls('set','view_mode', mode);
+            if (typeof renderRegisterTable === 'function') renderRegisterTable();
+            if (typeof renderRecentEntries === 'function') renderRecentEntries();
         }
 
         function toggleViewMode() {
@@ -4084,9 +4107,12 @@
                 setTimeout(() => { if (typeof fbConnect === 'function') fbConnect(); }, 1500);
             }
             
-            // 📱 Auto-detect view mode on resize
+            // 📱 Auto-detect view mode on resize (only if width changes to avoid mobile scroll trigger)
             let _resizeTimer;
+            let lastWidth = window.innerWidth;
             window.addEventListener('resize', function() {
+                if (window.innerWidth === lastWidth) return;
+                lastWidth = window.innerWidth;
                 clearTimeout(_resizeTimer);
                 _resizeTimer = setTimeout(autoDetectViewMode, 300);
             });
