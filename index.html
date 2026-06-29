@@ -3693,15 +3693,16 @@
                 // Mobile: narrower, stacked
                 root.style.maxWidth = '480px';
                 document.body.style.fontSize = '14px';
-                // Make tab buttons wrap in 2 rows
                 let tabBar = document.querySelector('.flex.bg-slate-200');
                 if (tabBar) { tabBar.style.flexWrap = 'wrap'; }
-                // Entry form grid → single column
-                document.querySelectorAll('.lg\\:grid-cols-10').forEach(el => {
-                    el.classList.remove('lg:grid-cols-10'); el.setAttribute('data-restored-10', '1');
+                // Force all grids to 2-column
+                document.querySelectorAll('.entry-form-grid').forEach(el => {
+                    el.classList.remove('sm:grid-cols-4','md:grid-cols-5','lg:grid-cols-10');
+                    el.setAttribute('data-reset-entry','1');
                 });
-                document.querySelectorAll('.lg\\:grid-cols-6').forEach(el => {
-                    el.classList.remove('lg:grid-cols-6'); el.setAttribute('data-restored-6', '1');
+                document.querySelectorAll('#formDynamicCharniContainer').forEach(el => {
+                    el.classList.remove('sm:grid-cols-3','md:grid-cols-5','lg:grid-cols-6');
+                    el.setAttribute('data-reset-charni','1');
                 });
                 btn.innerHTML = '📱 Mobile';
                 btn.classList.replace('bg-indigo-600','bg-purple-600');
@@ -3711,11 +3712,13 @@
                 document.body.style.fontSize = '';
                 let tabBar = document.querySelector('.flex.bg-slate-200');
                 if (tabBar) tabBar.style.flexWrap = '';
-                document.querySelectorAll('[data-restored-10]').forEach(el => {
-                    el.classList.add('lg:grid-cols-10'); el.removeAttribute('data-restored-10');
+                document.querySelectorAll('[data-grid-reset]').forEach(el => {
+                    el.classList.add('sm:grid-cols-4','md:grid-cols-5','lg:grid-cols-10');
+                    el.removeAttribute('data-grid-reset');
                 });
-                document.querySelectorAll('[data-restored-6]').forEach(el => {
-                    el.classList.add('lg:grid-cols-6'); el.removeAttribute('data-restored-6');
+                document.querySelectorAll('[data-grid-reset]').forEach(el => {
+                    el.classList.add('sm:grid-cols-3','md:grid-cols-5','lg:grid-cols-6');
+                    el.removeAttribute('data-grid-reset');
                 });
                 btn.innerHTML = '🖥️ Desktop';
                 btn.classList.replace('bg-purple-600','bg-indigo-600');
@@ -4062,10 +4065,14 @@
             }
         }
 
+        function autoDetectViewMode() {
+            let desired = window.innerWidth < 640 ? 'mobile' : 'desktop';
+            if (desired !== currentViewMode) applyViewMode(desired);
+        }
         window.onload = function() {
             applySettings();
             checkAutoLogin();
-            applyViewMode(currentViewMode);
+            autoDetectViewMode();
             renderMasterUI();
             epInitDropdowns();
             cmpInitDropdown();
@@ -4076,6 +4083,13 @@
             if (_ls('get','fb_config') && !fbConnected) {
                 setTimeout(() => { if (typeof fbConnect === 'function') fbConnect(); }, 1500);
             }
+            
+            // 📱 Auto-detect view mode on resize
+            let _resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(_resizeTimer);
+                _resizeTimer = setTimeout(autoDetectViewMode, 300);
+            });
             
             // ⌨️ ENTER → NEXT FIELD — works across ALL tabs, modals
             document.addEventListener('keydown', function(e) {
