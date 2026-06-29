@@ -27,6 +27,7 @@
 
     <!-- Firebase SDK for Live Sync -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
     <!-- External libraries required for Excel and PDF Export / Capturing -->
@@ -940,13 +941,12 @@
                     `📊 કાપન records: <strong>${mainRecords.length}</strong> &nbsp;|&nbsp; Storage used: <strong>${kb} KB</strong> / ~5120 KB`;
                 renderLoginHistory();
                 fbLoadConfigFromLS();
-                if (_ls('get','fb_config')) {
-                    setTimeout(() => {
-                        if (!fbConnected) fbConnect();
-                    }, 500);
+                if (_ls('get','fb_config') && !fbConnected) {
+                    setTimeout(() => { fbConnect(); }, 500);
                 }
                 getAutoBackupStatus();
             }
+        }
         }
 
         // CHARNI MASTER FUNCTIONS
@@ -3300,11 +3300,19 @@
             }
             try {
                 fbApp = firebase.initializeApp(cfg);
-                fbDb = firebase.database(fbApp);
-                fbConnected = true;
-                fbSaveConfigToLS();
-                fbUpdateStatus('✅ Firebase RTDB Connected!');
-                fbStartSyncListener();
+                fbUpdateStatus('🔄 Signing in anonymously...');
+                firebase.auth(fbApp).signInAnonymously()
+                    .then(() => {
+                        fbDb = firebase.database(fbApp);
+                        fbConnected = true;
+                        fbSaveConfigToLS();
+                        fbUpdateStatus('✅ Firebase RTDB Connected! (Anonymous Auth)');
+                        fbStartSyncListener();
+                    })
+                    .catch((err) => {
+                        fbUpdateStatus('❌ Auth error: ' + err.message + ' — Anonymous sign-in enabled?', true);
+                        fbConnected = false;
+                    });
             } catch(e) {
                 fbUpdateStatus('❌ Connect error: ' + e.message, true);
                 fbConnected = false;
@@ -3386,20 +3394,26 @@
         }
 
         function fbShowHelp() {
-            alert(`☁️ Firebase Realtime DB Sync Setup Guide:
+            alert(`☁️ Firebase Realtime DB Setup Guide:
 
-1. Go to https://console.firebase.google.com
-2. Open project "ng-cost"
-3. Left menu → Realtime Database
-4. Click "Create Database"
-5. Choose location → Next
-6. Select "Start in test mode" → Enable
-7. Go to ⚙️ Project Settings > General
-8. In "Your apps" section, copy config values
-9. Paste in fields above, click "Connect"
+1. Go to https://console.firebase.google.com/project/ng-cost
+2. Left menu → Realtime Database → Rules tab
+3. Paste these rules and Publish:
 
-✅ Data auto-syncs every 30 seconds!`);
-            window.open('https://console.firebase.google.com/project/ng-cost/database/ng-cost-default-rtdb/data', '_blank');
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null"
+  }
+}
+
+4. Left menu → Authentication → Sign-in method
+5. Enable "Anonymous" provider
+6. ⚙️ Project Settings → General → copy config
+7. Paste in fields above → Connect
+
+✅ Done! Data auto-syncs every 30 seconds.`);
+            window.open('https://console.firebase.google.com/project/ng-cost/overview', '_blank');
         }
 
         // ============================================================
@@ -3649,6 +3663,11 @@
                 document.getElementById('loginOverlay').classList.add('hidden');
                 document.getElementById('loginId').value = '';
                 document.getElementById('loginPass').value = '';
+                // Auto-connect Firebase
+                fbLoadConfigFromLS();
+                setTimeout(() => {
+                    if (!fbConnected && _ls('get','fb_config')) fbConnect();
+                }, 1000);
             } else {
                 errEl.classList.remove('hidden');
                 document.getElementById('loginPass').value = '';
