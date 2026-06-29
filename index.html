@@ -25,6 +25,10 @@
         }
     </script>
 
+    <!-- Firebase SDK for Live Sync -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
     <!-- External libraries required for Excel and PDF Export / Capturing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -167,7 +171,7 @@
                 <button id="viewToggleBtn" onclick="toggleViewMode()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all" title="View Mode Toggle">
                     🖥️ Desktop
                 </button>
-                <button onclick="openSettings()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all" title="સેટિંગ">
+                <button onclick="switchTab('settings')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all" title="સેટિંગ">
                     ⚙️ સેટિંગ
                 </button>
                 <button onclick="doLogout()" class="bg-red-700 hover:bg-red-800 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all" title="Logout">
@@ -179,90 +183,6 @@
             </div>
         </div>
 
-        <!-- ⚙️ SETTINGS MODAL -->
-        <div id="settingsModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200">
-                <div class="bg-slate-900 text-white px-5 py-3 rounded-t-2xl flex justify-between items-center">
-                    <span class="font-black text-sm uppercase tracking-wide">⚙️ એપ સેટિંગ / App Settings</span>
-                    <button onclick="closeSettings()" class="text-white hover:text-red-400 font-black text-xl cursor-pointer leading-none">✕</button>
-                </div>
-                <div class="p-5 space-y-4">
-
-                    <!-- App Title -->
-                    <div>
-                        <label class="block text-xs font-black text-slate-700 mb-1 uppercase">📛 એપ નામ (Title)</label>
-                        <input type="text" id="set_app_title" placeholder="નિર્ભય જેમ્સ ERP" class="w-full p-2 border border-slate-300 rounded font-bold text-blue-900 text-sm focus:ring-2 focus:ring-blue-400">
-                    </div>
-
-                    <hr class="border-slate-200">
-
-                    <!-- Admin ID & Password -->
-                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-200">
-                        <p class="text-xs font-black text-blue-900 uppercase mb-2">🔐 Admin Login</p>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-600 mb-0.5">Admin ID</label>
-                                <input type="text" id="set_admin_id" placeholder="admin" class="w-full p-2 border border-blue-300 rounded text-sm font-bold focus:ring-2 focus:ring-blue-400">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-600 mb-0.5">Admin Password</label>
-                                <div class="relative">
-                                    <input type="password" id="set_admin_pass" placeholder="••••••" class="w-full p-2 border border-blue-300 rounded text-sm font-bold focus:ring-2 focus:ring-blue-400 pr-8">
-                                    <button onclick="togglePass('set_admin_pass')" class="absolute right-2 top-2 text-gray-400 hover:text-gray-700 text-xs cursor-pointer">👁</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Delete Password -->
-                    <div class="bg-red-50 p-3 rounded-xl border border-red-200">
-                        <p class="text-xs font-black text-red-900 uppercase mb-2">🗑️ ડિલીટ પાસવર્ડ</p>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-600 mb-0.5">Delete Password</label>
-                                <div class="relative">
-                                    <input type="password" id="set_delete_pass" placeholder="••••" class="w-full p-2 border border-red-300 rounded text-sm font-bold focus:ring-2 focus:ring-red-400 pr-8">
-                                    <button onclick="togglePass('set_delete_pass')" class="absolute right-2 top-2 text-gray-400 hover:text-gray-700 text-xs cursor-pointer">👁</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-600 mb-0.5">Edit/Save Password</label>
-                                <div class="relative">
-                                    <input type="password" id="set_edit_pass" placeholder="••••" class="w-full p-2 border border-red-300 rounded text-sm font-bold focus:ring-2 focus:ring-red-400 pr-8">
-                                    <button onclick="togglePass('set_edit_pass')" class="absolute right-2 top-2 text-gray-400 hover:text-gray-700 text-xs cursor-pointer">👁</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Save -->
-                    <button onclick="saveSettings()" class="w-full bg-slate-900 hover:bg-slate-700 text-white font-black py-2.5 rounded-xl text-sm shadow cursor-pointer transition-all">
-                        💾 સેટિંગ સેવ કરો
-                    </button>
-                    <p id="settingsSavedMsg" class="hidden text-center text-green-700 font-bold text-xs">✅ સેટિંગ સફળતાપૂર્વક સેવ થઈ ગઈ!</p>
-
-                    <hr class="border-slate-200">
-
-                    <!-- Data Management -->
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        <p class="text-xs font-black text-slate-800 uppercase mb-2">🗄️ ડેટા મેનેજમેન્ટ (Data Management)</p>
-                        <div id="dataStorageInfo" class="text-[11px] text-slate-500 mb-2 font-medium"></div>
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="exportAllData()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer">
-                                📤 Export JSON
-                            </button>
-                            <label class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer text-center">
-                                📥 Import JSON
-                                <input type="file" accept=".json" onchange="importAllData(event)" class="hidden">
-                            </label>
-                            <button onclick="clearAllData()" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer">
-                                🗑️ Clear All
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <div class="tab-buttons flex bg-slate-200 rounded-b-lg p-1 gap-1 mb-6 shadow-sm border-x border-b border-slate-300">
             <button id="btn-entry" onclick="switchTab('entry')" class="flex-1 py-3 px-4 font-bold text-sm rounded-md transition-all cursor-pointer active-tab">
@@ -282,6 +202,9 @@
             </button>
             <button id="btn-bestkapan" onclick="switchTab('bestkapan')" class="flex-1 py-3 px-4 font-bold text-sm rounded-md transition-all cursor-pointer">
                 🏆 બેસ્ટ કાપન રિપોર્ટ
+            </button>
+            <button id="btn-settings" onclick="switchTab('settings')" class="flex-1 py-3 px-4 font-bold text-sm rounded-md transition-all cursor-pointer">
+                ⚙️ સેટિંગ્સ
             </button>
         </div>
 
@@ -541,33 +464,34 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-3" id="ep_diff_row">
-                    <div class="text-xs font-black text-amber-800 uppercase mb-2 tracking-wider">📊 ફેરફાર (Difference)</div>
-                    <div id="ep_diff_content" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
-                </div>
-
-                </div>
-
-                <div class="bg-green-50 border border-green-300 rounded-xl p-3">
-                    <h3 class="text-xs font-black text-green-800 uppercase mb-2 border-b border-green-200 pb-1 tracking-wider">💾 સ્ટેપ ૩: સેવ ઓપ્શન</h3>
-                    <div class="flex flex-wrap gap-3">
-                        <button onclick="epSaveEdit()" class="bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-8 rounded shadow text-sm cursor-pointer transition-all">
-                            💾 સેવ
-                        </button>
-                        <button onclick="epCancel()" class="bg-slate-400 hover:bg-slate-600 text-white font-bold py-2 px-8 rounded shadow text-sm cursor-pointer transition-all">
-                            ❌ કેન્સલ
-                        </button>
-                    </div>
-                </div>
             </div>
 
-            <div id="ep_empty_state" class="p-10 text-center text-gray-400 font-medium bg-white rounded border">
-                ઉપરથી આર્ટીકલ અને કાપન સિલેક્ટ કરો — લાઈવ comparison દેખાશે
+            <div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-3" id="ep_diff_row">
+                <div class="text-xs font-black text-amber-800 uppercase mb-2 tracking-wider">📊 ફેરફાર (Difference)</div>
+                <div id="ep_diff_content" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
+            </div>
+
+            </div>
+
+            <div class="bg-green-50 border border-green-300 rounded-xl p-3">
+                <h3 class="text-xs font-black text-green-800 uppercase mb-2 border-b border-green-200 pb-1 tracking-wider">💾 સ્ટેપ ૩: સેવ ઓપ્શન</h3>
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="epSaveEdit()" class="bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-8 rounded shadow text-sm cursor-pointer transition-all">
+                        💾 સેવ
+                    </button>
+                    <button onclick="epCancel()" class="bg-slate-400 hover:bg-slate-600 text-white font-bold py-2 px-8 rounded shadow text-sm cursor-pointer transition-all">
+                        ❌ કેન્સલ
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div id="tab-comparison" class="tab-content hidden bg-white p-4 rounded-xl shadow-lg mt-2">
+        <div id="ep_empty_state" class="p-10 text-center text-gray-400 font-medium bg-white rounded border">
+            ઉપરથી આર્ટીકલ અને કાપન સિલેક્ટ કરો — લાઈવ comparison દેખાશે
+        </div>
+    </div>
+
+    <div id="tab-comparison" class="tab-content hidden bg-white p-4 rounded-xl shadow-lg mt-2">
 
         <div class="bg-purple-900 text-white px-4 py-3 rounded-t-xl flex items-center justify-between mb-4">
             <div>
@@ -646,7 +570,7 @@
     </div><!-- /tab-comparison -->
 
     <!-- 🏆 BEST KAPAN REPORT TAB -->
-    <div id="tab-bestkapan" class="tab-content hidden bg-white p-4 rounded-xl shadow-lg mt-2">
+        <div id="tab-bestkapan" class="tab-content hidden bg-white p-4 rounded-xl shadow-lg mt-2">
 
         <div class="bg-emerald-700 text-white px-4 py-3 rounded-t-xl flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
@@ -660,6 +584,37 @@
                 <button onclick="downloadBestKapanPDF(this)" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
                     📄 PDF ડાઉનલોડ કરો
                 </button>
+            </div>
+        </div>
+
+        <div id="bestKapanTopSummary" class="hidden bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl p-4 mb-4 shadow-lg">
+            <div class="text-xs font-black uppercase tracking-wide mb-2">📊 સિલેક્ટેડ ચાલની ટોટલ</div>
+            <div id="bestKapanTopSummaryContent" class="grid grid-cols-3 gap-3 text-center">
+                <div>
+                    <div class="text-[10px] text-emerald-200 font-bold uppercase">કુલ ટકા (%)</div>
+                    <div id="bk_top_percent" class="text-lg font-black text-white">0.00%</div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-emerald-200 font-bold uppercase">કુલ રુ. (₹)</div>
+                    <div id="bk_top_rupees" class="text-lg font-black text-yellow-300">₹0</div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-emerald-200 font-bold uppercase">સરેરાશ ભાવ</div>
+                    <div id="bk_top_avg_rate" class="text-lg font-black text-cyan-300">₹0/ct</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-3 mb-4 flex flex-col gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+                <label class="text-xs font-black text-emerald-900 uppercase whitespace-nowrap">🔍 ચાલની ફિલ્ટર (મલ્ટી-સિલેક્શન):</label>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span id="bk_filter_count" class="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-1 rounded"></span>
+                    <button onclick="bkSelectAllCharni(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">✅ બધા</button>
+                    <button onclick="bkSelectAllCharni(false)" class="bg-slate-400 hover:bg-slate-600 text-white text-[10px] font-bold px-2 py-1 rounded cursor-pointer">☐ ક્લિઅર</button>
+                </div>
+            </div>
+            <div id="bk_charni_checks" class="flex flex-wrap gap-2 bg-white rounded-lg border border-emerald-300 p-2 max-h-32 overflow-y-auto">
             </div>
         </div>
 
@@ -750,6 +705,129 @@
         </div>
     </div>
 
+        <!-- ⚙️ SETTINGS TAB -->
+        <div id="tab-settings" class="tab-content hidden bg-white p-5 rounded-xl shadow-lg mt-2">
+            <div class="max-w-2xl mx-auto space-y-4">
+                <!-- Header -->
+                <div class="bg-slate-900 text-white px-5 py-3 rounded-xl flex justify-between items-center shadow">
+                    <span class="font-black text-sm uppercase tracking-wide">⚙️ એપ સેટિંગ / App Settings</span>
+                    <span id="settingsSavedMsg" class="hidden text-green-400 font-bold text-xs">✅ સેટિંગ સફળતાપૂર્વક સેવ થઈ ગઈ!</span>
+                </div>
+
+                <!-- App Title -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <label class="block text-xs font-black text-slate-700 mb-1 uppercase">📛 એપ નામ (Title)</label>
+                    <input type="text" id="set_app_title" placeholder="નિર્ભય જેમ્સ ERP" class="w-full p-2.5 border border-slate-300 rounded font-bold text-blue-900 text-sm focus:ring-2 focus:ring-blue-400">
+                </div>
+
+                <!-- Admin Login + Delete Password 2-col -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Admin ID & Password -->
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-sm">
+                        <p class="text-xs font-black text-blue-900 uppercase mb-2">🔐 Admin Login</p>
+                        <div class="space-y-2">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-0.5">Admin ID</label>
+                                <input type="text" id="set_admin_id" placeholder="admin" class="w-full p-2 border border-blue-300 rounded text-sm font-bold focus:ring-2 focus:ring-blue-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-0.5">Admin Password</label>
+                                <div class="relative">
+                                    <input type="password" id="set_admin_pass" placeholder="••••••" class="w-full p-2 border border-blue-300 rounded text-sm font-bold focus:ring-2 focus:ring-blue-400 pr-8">
+                                    <button onclick="togglePass('set_admin_pass')" class="absolute right-2 top-2 text-gray-400 hover:text-gray-700 text-xs cursor-pointer">👁</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Delete & Edit Password -->
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-200 shadow-sm">
+                        <p class="text-xs font-black text-red-900 uppercase mb-2">🗑️ ડિલીટ / એડિટ પાસવર્ડ</p>
+                        <div class="space-y-2">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-0.5">Delete Password</label>
+                                <div class="relative">
+                                    <input type="password" id="set_delete_pass" placeholder="••••" class="w-full p-2 border border-red-300 rounded text-sm font-bold focus:ring-2 focus:ring-red-400 pr-8">
+                                    <button onclick="togglePass('set_delete_pass')" class="absolute right-2 top-2 text-gray-400 hover:text-gray-700 text-xs cursor-pointer">👁</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-0.5">Edit/Save Password</label>
+                                <div class="relative">
+                                    <input type="password" id="set_edit_pass" placeholder="••••" class="w-full p-2 border border-red-300 rounded text-sm font-bold focus:ring-2 focus:ring-red-400 pr-8">
+                                    <button onclick="togglePass('set_edit_pass')" class="absolute right-2 top-2 text-gray-400 hover:text-gray-700 text-xs cursor-pointer">👁</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save Button -->
+                <button onclick="saveSettings()" class="w-full bg-slate-900 hover:bg-slate-700 text-white font-black py-3 rounded-xl text-sm shadow cursor-pointer transition-all">
+                    💾 સેટિંગ સેવ કરો
+                </button>
+
+                <hr class="border-slate-200">
+
+                <!-- Firebase Live Sync -->
+                <div class="bg-orange-50 p-4 rounded-xl border border-orange-200 shadow-sm">
+                    <p class="text-xs font-black text-orange-900 uppercase mb-2">☁️ Firebase Live Sync Setup</p>
+                    <div id="fbSyncStatus" class="text-[11px] text-orange-700 mb-2 font-medium">⏸️ Sync બંધ છે</div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <input type="text" id="fb_apiKey" placeholder="API Key" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
+                        <input type="text" id="fb_authDomain" placeholder="authDomain" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
+                        <input type="text" id="fb_projectId" placeholder="projectId" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
+                        <input type="text" id="fb_storageBucket" placeholder="storageBucket" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
+                        <input type="text" id="fb_messagingSenderId" placeholder="messagingSenderId" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
+                        <input type="text" id="fb_appId" placeholder="App ID" class="w-full p-1.5 border border-orange-300 rounded font-bold text-orange-900">
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <button onclick="fbConnect()" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-1.5 px-3 rounded shadow cursor-pointer">🔗 Connect</button>
+                        <button onclick="fbDisconnect()" class="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1.5 px-3 rounded shadow cursor-pointer">⏹️ Disconnect</button>
+                        <button onclick="fbSyncNow()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-1.5 px-3 rounded shadow cursor-pointer">🔄 Sync Now</button>
+                        <button onclick="fbShowHelp()" class="text-[10px] text-orange-600 underline hover:text-orange-800 cursor-pointer">❓ Guide</button>
+                    </div>
+                </div>
+
+                <!-- Login History + Auto Backup 2-col -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Login History -->
+                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 shadow-sm">
+                        <p class="text-xs font-black text-indigo-900 uppercase mb-2">🔐 લોગિન હિસ્ટ્રી (Last 24 Hours)</p>
+                        <div id="loginHistoryList" class="text-[11px] text-indigo-700 font-medium max-h-40 overflow-y-auto space-y-1 mb-2">
+                            <div class="text-center text-indigo-400 py-2">Loading...</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="exportLoginHistory()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-1.5 px-3 rounded shadow cursor-pointer">📤 Export</button>
+                            <button onclick="clearLoginHistory()" class="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1.5 px-3 rounded shadow cursor-pointer">🗑️ Clear</button>
+                        </div>
+                    </div>
+                    <!-- Auto Backup -->
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm">
+                        <p class="text-xs font-black text-emerald-900 uppercase mb-2">💾 ઓટો બેકઅપ (24 Hours)</p>
+                        <div id="autoBackupInfo" class="text-[11px] text-emerald-700 mb-2 font-medium"></div>
+                        <div class="flex gap-2">
+                            <button onclick="manualBackupNow()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer">📤 બેકઅપ લો</button>
+                            <button onclick="viewBackupLog()" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer">📋 લોગ</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-xs font-black text-slate-800 uppercase mb-2">🗄️ ડેટા મેનેજમેન્ટ (Data Management)</p>
+                    <div id="dataStorageInfo" class="text-[11px] text-slate-500 mb-2 font-medium"></div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="exportAllData()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer">📤 Export JSON</button>
+                        <label class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer text-center">
+                            📥 Import JSON
+                            <input type="file" accept=".json" onchange="importAllData(event)" class="hidden">
+                        </label>
+                        <button onclick="clearAllData()" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer">🗑️ Clear All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <script>
         // 🛡️ Safe localStorage (iOS private mode throws errors)
         let _memStore = {};
@@ -822,6 +900,7 @@
             document.getElementById('btn-editpanel').classList.remove('active-tab');
             document.getElementById('btn-comparison').classList.remove('active-tab');
             document.getElementById('btn-bestkapan').classList.remove('active-tab');
+            document.getElementById('btn-settings').classList.remove('active-tab');
             document.getElementById('tab-' + tabId).classList.remove('hidden');
             document.getElementById('btn-' + tabId).classList.add('active-tab');
             
@@ -840,7 +919,32 @@
                 cmpLoadKapans();
             }
             if(tabId === 'bestkapan') {
+                bestKapanPopulateCharniFilter();
                 renderBestKapanReport();
+            }
+            if(tabId === 'settings') {
+                // Load settings values
+                let s = _ls('get','app_settings');
+                let appSettings = s ? JSON.parse(s) : {};
+                document.getElementById('set_app_title').value = appSettings.appTitle || '';
+                document.getElementById('set_admin_id').value = appSettings.adminId || 'admin';
+                document.getElementById('set_admin_pass').value = appSettings.adminPass || 'nimje';
+                document.getElementById('set_delete_pass').value = appSettings.deletePass || '';
+                document.getElementById('set_edit_pass').value = appSettings.editPass || '';
+                document.getElementById('settingsSavedMsg').classList.add('hidden');
+                // Storage info
+                let recSize = JSON.stringify(mainRecords).length;
+                let kb = (recSize / 1024).toFixed(1);
+                document.getElementById('dataStorageInfo').innerHTML =
+                    `📊 કાપન records: <strong>${mainRecords.length}</strong> &nbsp;|&nbsp; Storage used: <strong>${kb} KB</strong> / ~5120 KB`;
+                renderLoginHistory();
+                fbLoadConfigFromLS();
+                if (_ls('get','fb_config')) {
+                    setTimeout(() => {
+                        if (!fbConnected) fbConnect();
+                    }, 500);
+                }
+                getAutoBackupStatus();
             }
         }
 
@@ -1368,19 +1472,76 @@
         // ============================================================
         // 🏆 BEST KAPAN REPORT — ARTICLE-WISE TOP 5 PER ARTICLE
         // ============================================================
+        function bestKapanHasCharniPct(rec, chName) {
+            if (!rec.charniMap || !chName) return false;
+            return rec.charniMap[chName] && rec.charniMap[chName].percentage > 0;
+        }
+
+        function bestKapanAnySelectedHasCharni(rec, selectedCharnis) {
+            if (!rec.charniMap || selectedCharnis.length === 0) return false;
+            for (let ch of selectedCharnis) {
+                if (bestKapanHasCharniPct(rec, ch)) return true;
+            }
+            return false;
+        }
+
+        function bestKapanPopulateCharniFilter() {
+            let container = document.getElementById('bk_charni_checks');
+            if (!container) return;
+            // Save checked state before regenerate
+            let checkedVals = new Set();
+            container.querySelectorAll('.bk-charni-check:checked').forEach(cb => checkedVals.add(cb.value));
+            let used = new Set();
+            mainRecords.forEach(r => {
+                if (r.charniMap) Object.keys(r.charniMap).forEach(ch => {
+                    if (ch && !used.has(ch)) { used.add(ch); }
+                });
+            });
+            articleMaster.forEach(a => {
+                a.charnis.forEach(c => {
+                    if (!used.has(c.name)) used.add(c.name);
+                });
+            });
+            let sorted = [...used].sort();
+            container.innerHTML = sorted.map(ch => {
+                let checked = checkedVals.has(ch) ? ' checked' : '';
+                return `<label class="flex items-center gap-1.5 bg-white border border-emerald-300 rounded-lg px-2.5 py-1 cursor-pointer hover:bg-emerald-50 text-xs font-bold text-emerald-900 select-none transition-all">
+                    <input type="checkbox" class="bk-charni-check w-4 h-4 accent-emerald-700" value="${ch}"${checked} onchange="renderBestKapanReport()">
+                    <span>${ch}</span>
+                </label>`;
+            }).join('');
+        }
+
+        function bkGetSelectedCharnis() {
+            let checks = document.querySelectorAll('.bk-charni-check:checked');
+            return Array.from(checks).map(cb => cb.value);
+        }
+
+        function bkSelectAllCharni(checked) {
+            document.querySelectorAll('.bk-charni-check').forEach(cb => cb.checked = checked);
+            renderBestKapanReport();
+        }
+
         function renderBestKapanReport() {
             let container = document.getElementById('bestKapanContent');
             if (!container) return;
+
+            // Reset top summary
+            bestKapanUpdateTopSummary(0, 0, 0);
+
+            let selectedCharnis = bkGetSelectedCharnis();
+
             if (mainRecords.length === 0) {
                 container.innerHTML = `<div class="p-10 text-center text-gray-400 font-medium bg-emerald-50 rounded-xl border border-emerald-200">
                     <div class="text-4xl mb-3">📭</div>
                     <p class="font-bold text-gray-500">હજુ સુધી કોઈ કાપનનો ડેટા ઉમેરેલો નથી.</p>
                     <p class="text-xs mt-1">પ્રથમ ટેબમાંથી ડેટા એન્ટ્રી કરો</p>
                 </div>`;
+                document.getElementById('bk_filter_count').innerText = '0 કાપન';
                 return;
             }
 
-            // Group records by article
+            // Per article filter: group records by article FIRST, then filter each article
             let articleGroups = {};
             mainRecords.forEach(r => {
                 let a = r.articleName || 'Unknown';
@@ -1388,15 +1549,37 @@
                 articleGroups[a].push(r);
             });
 
+            let totalFiltered = 0;
             let html = '';
 
-            // Per article: top 5 with smallest abs difference — full detail like dashboard
             Object.keys(articleGroups).sort().forEach(artName => {
                 let records = articleGroups[artName];
-                let sorted = [...records].sort((a, b) => (b.polishAverage || 0) - (a.polishAverage || 0));
-                let top5 = sorted.slice(0, 5);
                 let articleObj = articleMaster.find(a => a.name === artName);
                 let activeCharnisList = articleObj ? articleObj.charnis.map(c => c.name) : ["+000 TO -1", "+1 TO -2", "+2 TO -5", "+5 TO -7", "+7"];
+
+                // Apply charni filter per article
+                let filtered = records;
+                if (selectedCharnis.length > 0) {
+                    if (selectedCharnis.length === 1) {
+                        let ch = selectedCharnis[0];
+                        filtered = records.filter(r => bestKapanHasCharniPct(r, ch));
+                    } else {
+                        filtered = records.filter(r => bestKapanAnySelectedHasCharni(r, selectedCharnis));
+                    }
+                }
+
+                if (filtered.length === 0) return;
+
+                // Sort: if charni selected, sort by that charni's % descending; else by polishAverage
+                let sorted;
+                if (selectedCharnis.length === 1) {
+                    let ch = selectedCharnis[0];
+                    sorted = [...filtered].sort((a, b) => ((b.charniMap && b.charniMap[ch] ? b.charniMap[ch].percentage : 0) - (a.charniMap && a.charniMap[ch] ? a.charniMap[ch].percentage : 0)));
+                } else {
+                    sorted = [...filtered].sort((a, b) => (b.polishAverage || 0) - (a.polishAverage || 0));
+                }
+                let top5 = sorted.slice(0, 5);
+                totalFiltered += top5.length;
 
                 let rowsHtml = top5.map((r, i) => renderFullRecordRow(r, i, activeCharnisList, articleObj, true)).join('');
 
@@ -1415,7 +1598,17 @@
                 </div>`;
             });
 
-            container.innerHTML = html;
+            document.getElementById('bk_filter_count').innerText = totalFiltered + ' કાપન';
+
+            if (html) {
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `<div class="p-10 text-center text-gray-400 font-medium bg-emerald-50 rounded-xl border border-emerald-200">
+                    <div class="text-4xl mb-3">🔍</div>
+                    <p class="font-bold text-gray-500">પસંદ કરેલ ચાલની માટે કોઈ કાપન મળ્યો નથી જ્યાં તે હાઈએસ્ટ હોય.</p>
+                    <p class="text-xs mt-1">બીજી ચાલની પસંદ કરો અથવા ફિલ્ટર સાફ કરો</p>
+                </div>`;
+            }
         }
 
         const exportColumnHeaders = [
@@ -1712,14 +1905,46 @@
             }
         }
 
+        function bkFilterBySelection(records) {
+            let selectedCharnis = bkGetSelectedCharnis();
+            if (selectedCharnis.length === 0) return records;
+            let groups = {};
+            records.forEach(r => {
+                let a = r.articleName || 'Unknown';
+                if (!groups[a]) groups[a] = [];
+                groups[a].push(r);
+            });
+            let result = [];
+            Object.keys(groups).forEach(artName => {
+                let recs = groups[artName];
+                let filtered;
+                if (selectedCharnis.length === 1) {
+                    let ch = selectedCharnis[0];
+                    filtered = recs.filter(r => bestKapanHasCharniPct(r, ch));
+                } else {
+                    filtered = recs.filter(r => bestKapanAnySelectedHasCharni(r, selectedCharnis));
+                }
+                let sorted;
+                if (selectedCharnis.length === 1) {
+                    let ch = selectedCharnis[0];
+                    sorted = [...filtered].sort((a, b) => ((b.charniMap && b.charniMap[ch] ? b.charniMap[ch].percentage : 0) - (a.charniMap && a.charniMap[ch] ? a.charniMap[ch].percentage : 0)));
+                } else {
+                    sorted = [...filtered].sort((a, b) => (b.polishAverage || 0) - (a.polishAverage || 0));
+                }
+                result.push(...sorted.slice(0, 5));
+            });
+            return result;
+        }
+
         async function downloadBestKapanExcel() {
-            if (mainRecords.length === 0) { alert("⚠️ ડાઉનલોડ કરવા માટે કોઈ ડેટા નથી!"); return; }
+            let baseRecords = bkFilterBySelection(mainRecords);
+            if (baseRecords.length === 0) { alert("⚠️ ડાઉનલોડ કરવા માટે કોઈ ડેટા નથી!"); return; }
 
             const wb = new ExcelJS.Workbook();
             
             // Group records by article
             let articleGroups = {};
-            mainRecords.forEach(r => {
+            baseRecords.forEach(r => {
                 let a = r.articleName || 'Unknown';
                 if (!articleGroups[a]) articleGroups[a] = [];
                 articleGroups[a].push(r);
@@ -1830,7 +2055,8 @@
         }
 
         async function downloadBestKapanPDF(btnEl) {
-            if (!mainRecords.length) { alert("⚠️ ડેટા નથી!"); return; }
+            let baseRecords = bkFilterBySelection(mainRecords);
+            if (!baseRecords.length) { alert("⚠️ ડેટા નથી!"); return; }
             btnEl.innerHTML = '⏳ PDF બની રહ્યું છે...';
             btnEl.disabled = true;
             try {
@@ -1841,7 +2067,7 @@
 
                 // Group by article
                 let articleGroups = {};
-                mainRecords.forEach(r => {
+                baseRecords.forEach(r => {
                     let a = r.articleName || 'Unknown';
                     if (!articleGroups[a]) articleGroups[a] = [];
                     articleGroups[a].push(r);
@@ -2899,21 +3125,6 @@
             }
         }
 
-        function openSettings() {
-            document.getElementById('set_app_title').value = appSettings.appTitle || '';
-            document.getElementById('set_admin_id').value = appSettings.adminId || '';
-            document.getElementById('set_admin_pass').value = appSettings.adminPass || '';
-            document.getElementById('set_delete_pass').value = appSettings.deletePass || '';
-            document.getElementById('set_edit_pass').value = appSettings.editPass || '';
-            document.getElementById('settingsSavedMsg').classList.add('hidden');
-            // Storage info
-            let recSize = JSON.stringify(mainRecords).length;
-            let kb = (recSize / 1024).toFixed(1);
-            document.getElementById('dataStorageInfo').innerHTML =
-                `📊 કાપન records: <strong>${mainRecords.length}</strong> &nbsp;|&nbsp; Storage used: <strong>${kb} KB</strong> / ~5120 KB`;
-            document.getElementById('settingsModal').classList.remove('hidden');
-        }
-
         function exportAllData() {
             let exportObj = {
                 exportedAt: new Date().toISOString(),
@@ -2941,7 +3152,7 @@
                     saveRecords();
                     renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                     alert('✅ Data સફળતાપૂર્વક import થઈ ગયો!');
-                    closeSettings();
+                    switchTab('register');
                 } catch(err) { alert('❌ Import Error: ' + err.message); }
             };
             reader.readAsText(file);
@@ -2955,11 +3166,7 @@
             saveRecords();
             updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
             alert('✅ બધો data clear થઈ ગયો.');
-            closeSettings();
-        }
-
-        function closeSettings() {
-            document.getElementById('settingsModal').classList.add('hidden');
+            switchTab('entry');
         }
 
         function saveSettings() {
@@ -2977,8 +3184,7 @@
             document.getElementById('settingsSavedMsg').classList.remove('hidden');
             setTimeout(() => {
                 document.getElementById('settingsSavedMsg').classList.add('hidden');
-                closeSettings();
-            }, 1500);
+            }, 3000);
         }
 
         function togglePass(inputId) {
@@ -2988,8 +3194,6 @@
 
         // Close modals on backdrop click
         document.addEventListener('click', function(e) {
-            let settingsModal = document.getElementById('settingsModal');
-            if (e.target === settingsModal) closeSettings();
             let charniCalcModal = document.getElementById('charniCalcModal');
             if (e.target === charniCalcModal) closeCharniCalcModal();
         });
@@ -3022,6 +3226,321 @@
                 renderRegisterTable();
                 renderRecentEntries();
             }
+        }
+
+        // ============================================================
+        // ☁️ FIREBASE LIVE SYNC
+        // ============================================================
+        let fbApp = null;
+        let fbDb = null;
+        let fbConnected = false;
+        let fbSyncTimer = null;
+
+        function fbGetConfig() {
+            return {
+                apiKey: document.getElementById('fb_apiKey').value.trim(),
+                authDomain: document.getElementById('fb_authDomain').value.trim(),
+                projectId: document.getElementById('fb_projectId').value.trim(),
+                storageBucket: document.getElementById('fb_storageBucket').value.trim(),
+                messagingSenderId: document.getElementById('fb_messagingSenderId').value.trim(),
+                appId: document.getElementById('fb_appId').value.trim()
+            };
+        }
+
+        function fbSaveConfigToLS() {
+            let cfg = fbGetConfig();
+            _ls('set','fb_config', JSON.stringify(cfg));
+        }
+
+        function fbLoadConfigFromLS() {
+            let data = _ls('get','fb_config');
+            if (data) {
+                try {
+                    let cfg = JSON.parse(data);
+                    document.getElementById('fb_apiKey').value = cfg.apiKey || '';
+                    document.getElementById('fb_authDomain').value = cfg.authDomain || '';
+                    document.getElementById('fb_projectId').value = cfg.projectId || '';
+                    document.getElementById('fb_storageBucket').value = cfg.storageBucket || '';
+                    document.getElementById('fb_messagingSenderId').value = cfg.messagingSenderId || '';
+                    document.getElementById('fb_appId').value = cfg.appId || '';
+                } catch(e) {}
+            } else {
+                // Pre-fill default config and save it
+                let cfg = {
+                    apiKey: "AIzaSyDvu7pJMXatKNHFAuJMtsh_zpmb8Jr0BCM",
+                    authDomain: "ng-cost.firebaseapp.com",
+                    projectId: "ng-cost",
+                    storageBucket: "ng-cost.firebasestorage.app",
+                    messagingSenderId: "1085823954995",
+                    appId: "1:1085823954995:web:41305ea073514cb6fd3346"
+                };
+                Object.entries(cfg).forEach(([k,v]) => {
+                    let el = document.getElementById('fb_' + k);
+                    if (el) el.value = v;
+                });
+                _ls('set','fb_config', JSON.stringify(cfg));
+            }
+        }
+
+        function fbUpdateStatus(text, isError) {
+            let el = document.getElementById('fbSyncStatus');
+            if (el) el.innerHTML = text;
+            if (isError) console.error('Firebase:', text);
+        }
+
+        function fbConnect() {
+            if (fbConnected) { fbUpdateStatus('✅ Already connected'); return; }
+            let cfg = fbGetConfig();
+            if (!cfg.apiKey || !cfg.projectId) {
+                fbUpdateStatus('❌ કૃપા કરીને Firebase config ભરો (API Key અને Project ID જરૂરી)', true);
+                return;
+            }
+            try {
+                fbApp = firebase.initializeApp(cfg);
+                fbDb = firebase.firestore(fbApp);
+                fbConnected = true;
+                fbSaveConfigToLS();
+                fbUpdateStatus('✅ Firebase Connected!');
+                // Start auto-sync listener
+                fbStartSyncListener();
+            } catch(e) {
+                fbUpdateStatus('❌ Connect error: ' + e.message, true);
+                fbConnected = false;
+            }
+        }
+
+        function fbDisconnect() {
+            if (fbSyncTimer) { clearInterval(fbSyncTimer); fbSyncTimer = null; }
+            if (fbApp) {
+                try { fbApp.delete(); } catch(e) {}
+                fbApp = null; fbDb = null;
+            }
+            fbConnected = false;
+            fbUpdateStatus('⏸️ Disconnected');
+        }
+
+        function fbStartSyncListener() {
+            if (!fbDb) return;
+            // Listen for remote changes from Firestore
+            fbDb.collection('diamond_erp').doc('mainData').onSnapshot((doc) => {
+                if (doc.exists && fbConnected) {
+                    let remote = doc.data();
+                    if (remote && remote.lastUpdated) {
+                        let localTime = parseInt(_ls('get','fb_last_sync') || '0');
+                        let remoteTime = remote.lastUpdated?.toMillis?.() || remote.lastUpdated || 0;
+                        if (remoteTime > localTime) {
+                            fbUpdateStatus('🔄 Remote data detected! Importing...');
+                            if (remote.mainRecords) mainRecords = remote.mainRecords;
+                            if (remote.charniMaster) { charniMaster = remote.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
+                            if (remote.articleMaster) { articleMaster = remote.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                            saveRecords();
+                            renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
+                            _ls('set','fb_last_sync', Date.now().toString());
+                            fbUpdateStatus('✅ Synced from cloud');
+                        }
+                    }
+                }
+            }, (err) => {
+                fbUpdateStatus('⚠️ Sync listener error: ' + err.message, true);
+            });
+
+            // Auto push local data every 30 seconds
+            if (fbSyncTimer) clearInterval(fbSyncTimer);
+            fbSyncTimer = setInterval(() => { fbPushData(); }, 30000);
+        }
+
+        async function fbPushData() {
+            if (!fbDb || !fbConnected) return;
+            try {
+                let exportObj = {
+                    mainRecords: mainRecords,
+                    charniMaster: charniMaster,
+                    articleMaster: articleMaster,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                await fbDb.collection('diamond_erp').doc('mainData').set(exportObj, { merge: true });
+                _ls('set','fb_last_sync', Date.now().toString());
+                fbUpdateStatus('✅ Data synced to cloud');
+            } catch(e) {
+                fbUpdateStatus('⚠️ Sync error: ' + e.message, true);
+            }
+        }
+
+        function fbSyncNow() {
+            if (!fbConnected) { fbUpdateStatus('❌ Connect Firebase first!', true); return; }
+            fbUpdateStatus('🔄 Syncing...');
+            fbPushData().then(() => {
+                // Also try to pull
+                if (fbDb) {
+                    fbDb.collection('diamond_erp').doc('mainData').get().then((doc) => {
+                        if (doc.exists) {
+                            let data = doc.data();
+                            if (data.mainRecords && data.lastUpdated) {
+                                let localTime = parseInt(_ls('get','fb_last_sync') || '0');
+                                let remoteTime = data.lastUpdated?.toMillis?.() || 0;
+                                if (remoteTime > localTime) {
+                                    mainRecords = data.mainRecords;
+                                    if (data.charniMaster) { charniMaster = data.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
+                                    if (data.articleMaster) { articleMaster = data.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                                    saveRecords();
+                                    renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
+                                }
+                            }
+                        }
+                        fbUpdateStatus('✅ Sync complete');
+                    }).catch(e => fbUpdateStatus('⚠️ Pull error: ' + e.message, true));
+                }
+            });
+        }
+
+        function fbShowHelp() {
+            alert(`☁️ Firebase Live Sync Setup Guide:
+
+1. Go to https://console.firebase.google.com
+2. Click "Create Project" (or use existing)
+3. Name it "diamond-erp-sync" (or any name)
+4. Disable Google Analytics (optional)
+5. Wait for project creation
+6. Click "Web" icon (</>)
+7. Register app (name: "diamond-erp")
+8. Copy the firebaseConfig object values
+9. Paste them in the fields above
+10. Click "Connect"
+
+Then go to Firestore Database:
+11. Left menu → Firestore Database
+12. Click "Create Database"
+13. Choose "Start in test mode"
+14. Location: choose closest to you
+
+✅ After this, data will auto-sync every 30 seconds!`);
+
+            // Try opening the URL
+            window.open('https://console.firebase.google.com', '_blank');
+        }
+
+        // ============================================================
+        // 🔐 LOGIN HISTORY + AUTO BACKUP
+        // ============================================================
+        function getLoginHistory() {
+            let h = JSON.parse(_ls('get','login_history')) || [];
+            let cutoff = Date.now() - 24 * 60 * 60 * 1000;
+            let recent = h.filter(e => e.ts > cutoff);
+            if (recent.length !== h.length) { _ls('set','login_history', JSON.stringify(recent)); }
+            return recent;
+        }
+
+        function addLoginHistoryEntry(deviceInfo) {
+            let h = JSON.parse(_ls('get','login_history')) || [];
+            let cutoff = Date.now() - 24 * 60 * 60 * 1000;
+            h = h.filter(e => e.ts > cutoff);
+            h.push({
+                ts: Date.now(),
+                time: new Date().toLocaleString('gu-IN', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+                device: deviceInfo || navigator.userAgent || 'Unknown'
+            });
+            _ls('set','login_history', JSON.stringify(h));
+        }
+
+        function renderLoginHistory() {
+            let container = document.getElementById('loginHistoryList');
+            if (!container) return;
+            let h = getLoginHistory();
+            if (!h.length) {
+                container.innerHTML = '<div class="text-center text-indigo-400 py-2">કોઈ લોગિન હિસ્ટ્રી નથી</div>';
+                return;
+            }
+            container.innerHTML = h.reverse().map(e =>
+                `<div class="flex items-center gap-2 bg-white/70 rounded px-2 py-1 border border-indigo-100">
+                    <span class="text-[10px] text-indigo-400 font-bold">${e.time}</span>
+                    <span class="text-[10px] text-indigo-600 truncate flex-1" title="${e.device}">${e.device.length > 50 ? e.device.substring(0,50)+'...' : e.device}</span>
+                </div>`
+            ).join('');
+        }
+
+        function exportLoginHistory() {
+            let h = getLoginHistory();
+            if (!h.length) { alert('કોઈ હિસ્ટ્રી નથી!'); return; }
+            let txt = h.map(e => `${e.time} | ${e.device}`).join('\n');
+            let blob = new Blob([txt], {type:'text/plain'});
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Login_History_${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+        }
+
+        function clearLoginHistory() {
+            if (!confirm('બધી લોગિન હિસ્ટ્રી ક્લિયર કરવી?')) return;
+            _ls('set','login_history', JSON.stringify([]));
+            renderLoginHistory();
+        }
+
+        // Auto Backup (once per 24h)
+        function getAutoBackupStatus() {
+            let last = parseInt(_ls('get','last_auto_backup') || '0');
+            let next = last + 24 * 60 * 60 * 1000;
+            let now = Date.now();
+            let info = document.getElementById('autoBackupInfo');
+            if (info) {
+                if (last === 0) {
+                    info.innerText = '⏳ હજુ સુધી કોઈ ઓટો બેકઅપ લેવાયો નથી.';
+                } else {
+                    let lastStr = new Date(last).toLocaleString('gu-IN', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+                    let remain = Math.max(0, Math.ceil((next - now) / (60 * 60 * 1000)));
+                    info.innerText = `🕐 છેલ્લો બેકઅપ: ${lastStr} | આગલો: ${remain} કલાકમાં`;
+                }
+            }
+            return { last, next, now };
+        }
+
+        function performAutoBackup(force) {
+            let { last, next, now } = getAutoBackupStatus();
+            if (!force && now < next) return false;
+            let exportObj = {
+                exportedAt: new Date().toISOString(),
+                mainRecords, charniMaster, articleMaster, appSettings,
+                backupType: force ? 'MANUAL' : 'AUTO'
+            };
+            _ls('set','last_auto_backup', now.toString());
+            // Save backup to localStorage for recovery
+            _ls('set','last_backup_data', JSON.stringify(exportObj));
+            getAutoBackupStatus();
+            return true;
+        }
+
+        function checkAutoBackupOnLogin() {
+            let done = performAutoBackup(false);
+            if (done) {
+                setTimeout(() => {
+                    alert('💾 ઓટો બેકઅપ લેવાઈ ગયો! (24-hour backup)');
+                }, 500);
+            }
+        }
+
+        function manualBackupNow() {
+            performAutoBackup(true);
+            // Also download
+            let exportObj = {
+                exportedAt: new Date().toISOString(),
+                mainRecords, charniMaster, articleMaster, appSettings,
+                backupType: 'MANUAL'
+            };
+            let blob = new Blob([JSON.stringify(exportObj, null, 2)], {type:'application/json'});
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Auto_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            getAutoBackupStatus();
+            alert('✅ બેકઅપ સફળતાપૂર્વક લેવાઈ ગયો!');
+        }
+
+        function viewBackupLog() {
+            let data = _ls('get','last_backup_data');
+            if (!data) { alert('કોઈ બેકઅપ લોગ નથી.'); return; }
+            try {
+                let obj = JSON.parse(data);
+                alert(`📋 છેલ્લો બેકઅપ:\nતારીખ: ${obj.exportedAt || 'N/A'}\nપ્રકાર: ${obj.backupType || 'N/A'}\nરેકોર્ડ્સ: ${(obj.mainRecords||[]).length}\nચારણી: ${(obj.charniMaster||[]).length}\nઆર્ટીકલ: ${(obj.articleMaster||[]).length}`);
+            } catch(e) { alert('બેકઅપ લોગ વાંચી શકાયો નહીં.'); }
         }
 
         // ============================================================
@@ -3140,6 +3659,10 @@
                     _ls('remove','login_token');
                     _ls('remove','login_token_time');
                 }
+                // Record login history
+                addLoginHistoryEntry('User: ' + id + ' | ' + (navigator.platform || '') + ' | ' + (navigator.userAgent || '').substring(0, 80));
+                // Check auto backup
+                checkAutoBackupOnLogin();
                 document.getElementById('loginOverlay').classList.add('hidden');
                 document.getElementById('loginId').value = '';
                 document.getElementById('loginPass').value = '';
@@ -3334,6 +3857,19 @@
         // ============================================================
         let ccCurrentRecord = null;
 
+        function bestKapanUpdateTopSummary(totalPct, totalRupees, avgRate) {
+            let bar = document.getElementById('bestKapanTopSummary');
+            if (!bar) return;
+            if (totalPct > 0) {
+                bar.classList.remove('hidden');
+                document.getElementById('bk_top_percent').innerText = totalPct.toFixed(2) + '%';
+                document.getElementById('bk_top_rupees').innerText = '₹' + Math.round(totalRupees).toLocaleString('en-IN');
+                document.getElementById('bk_top_avg_rate').innerText = '₹' + Math.round(avgRate).toLocaleString('en-IN') + '/ct';
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
         function openCharniCalcModal(uid) {
             let rec = mainRecords.find(r => r.id == uid);
             if (!rec) return;
@@ -3399,6 +3935,10 @@
 
         function closeCharniCalcModal() {
             document.getElementById('charniCalcModal').classList.add('hidden');
+            // Hide top summary if Best Kapan tab is active
+            if (!document.getElementById('tab-bestkapan').classList.contains('hidden')) {
+                bestKapanUpdateTopSummary(0, 0, 0);
+            }
             ccCurrentRecord = null;
         }
 
@@ -3421,6 +3961,11 @@
             document.getElementById('cc_res_percent').innerText = totalPct.toFixed(2) + '%';
             document.getElementById('cc_res_rupees').innerText = '₹' + Math.round(totalRupees).toLocaleString('en-IN');
             document.getElementById('cc_res_avg_rate').innerText = '₹' + Math.round(avgRate).toLocaleString('en-IN') + '/ct';
+
+            // If Best Kapan tab is active, update its top summary too
+            if (!document.getElementById('tab-bestkapan').classList.contains('hidden')) {
+                bestKapanUpdateTopSummary(totalPct, totalRupees, avgRate);
+            }
         }
 
         function clearCharniCalcSelection() {
@@ -3428,6 +3973,10 @@
                 cb.checked = false;
             });
             calculateCharniSelectionTotal();
+            // If Best Kapan tab is active, hide top summary
+            if (!document.getElementById('tab-bestkapan').classList.contains('hidden')) {
+                bestKapanUpdateTopSummary(0, 0, 0);
+            }
         }
 
         window.onload = function() {
