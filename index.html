@@ -2697,7 +2697,7 @@
                 mainRecords[idx].entryType = 'EDIT';
                 saveRecords();
                 alert("ભાવ અને ચારણી % સક્સેસફુલી સેવ થઈ ગયા!");
-                epCancel(); renderRegisterTable();
+                epCancel(); renderRegisterTable(); renderRecentEntries();
             }
         }
 
@@ -3490,7 +3490,7 @@
             let pwd = prompt("🔒 ડિલીટ પાસવર્ડ નાખો:");
             if (pwd !== appSettings.deletePass) { alert("❌ ખોટો પાસવર્ડ!"); return; }
             if (confirm("ખરેખર ડીલીટ કરવું છે?")) {
-                mainRecords = mainRecords.filter(r => r.id !== uid);
+                mainRecords = mainRecords.filter(r => r.id != uid);
                 saveRecords();
                 updateRegisterFilterDropdown();
                 renderRegisterTable();
@@ -4019,7 +4019,9 @@
             let countBadge = document.getElementById('recentEntryCount');
             if (!container) return;
 
-            let last5 = [...mainRecords].reverse().slice(0, 5);
+            // Sort by id (timestamp) descending so newest always shows first regardless of array order
+            let sorted = [...mainRecords].sort((a, b) => (b.id || 0) - (a.id || 0));
+            let last5 = sorted.slice(0, 5);
             countBadge.innerText = mainRecords.length + ' કુલ';
 
             if (!last5.length) {
