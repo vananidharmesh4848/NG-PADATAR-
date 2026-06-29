@@ -268,6 +268,15 @@
                 <p class="text-xs opacity-80 mt-0.5">ડાયમંડ કોસ્ટિંગ ERP — લાઈવ એડિટ પેનલ અને સાઈઝ કૉલમ ગોઠવણી સાથે</p>
             </div>
             <div class="header-actions flex items-center gap-2 flex-wrap justify-end">
+                <!-- Sync status badge (always visible when Firebase connected) -->
+                <div id="headerSyncBadge" class="hidden items-center gap-1.5 bg-slate-700 border border-slate-500 rounded-lg px-2 py-1">
+                    <span id="headerSyncDot" class="inline-block w-2 h-2 rounded-full bg-gray-400"></span>
+                    <span id="headerSyncText" class="text-[10px] text-slate-200 font-bold">--</span>
+                </div>
+                <!-- Refresh button: pull latest from Firebase -->
+                <button id="btnRefreshData" onclick="appRefreshData()" class="bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all" title="Firebase માંથી તાજો ડેટા લોડ કરો / Page Refresh">
+                    🔄 Refresh
+                </button>
                 <button id="btnUndo" onclick="appUndo()" disabled class="bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed" title="Undo (છેલ્લો ફેરફાર પાછો લો)">↩ Undo</button>
                 <button id="btnRedo" onclick="appRedo()" disabled class="bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed" title="Redo (ફરી કરો)">↪ Redo</button>
                 <button id="viewToggleBtn" onclick="toggleViewMode()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded shadow cursor-pointer transition-all" title="View Mode Toggle">
@@ -3549,6 +3558,72 @@
             let el = document.getElementById('fbSyncStatus');
             if (el) el.innerHTML = text;
             if (isError) console.error('Firebase:', text);
+            // Update header badge
+            let badge = document.getElementById('headerSyncBadge');
+            let dot   = document.getElementById('headerSyncDot');
+            let label = document.getElementById('headerSyncText');
+            if (badge && dot && label) {
+                if (fbConnected || text.includes('✅') || text.includes('🔄')) {
+                    badge.classList.remove('hidden');
+                    badge.classList.add('flex');
+                }
+                if (isError || text.includes('❌') || text.includes('⚠️')) {
+                    dot.className = 'inline-block w-2 h-2 rounded-full bg-red-400 animate-pulse';
+                    label.textContent = '⚠️ Sync Error';
+                } else if (text.includes('🔄') || text.includes('Loading') || text.includes('Sync')) {
+                    dot.className = 'inline-block w-2 h-2 rounded-full bg-yellow-400 animate-pulse';
+                    label.textContent = '🔄 Syncing…';
+                } else if (text.includes('✅')) {
+                    dot.className = 'inline-block w-2 h-2 rounded-full bg-green-400';
+                    label.textContent = '✅ Synced';
+                } else if (text.includes('⏸️')) {
+                    dot.className = 'inline-block w-2 h-2 rounded-full bg-gray-400';
+                    label.textContent = '⏸️ Offline';
+                    badge.classList.remove('hidden');
+                    badge.classList.add('flex');
+                }
+            }
+        }
+
+        // Pull latest from Firebase without pushing (for 2s poller)
+        async function fbPullLatest() {
+            if (!fbDb || !fbConnected || _fbPushing) return;
+            try {
+                let snap = await fbDb.ref('diamond_erp/mainData').once('value');
+                let remote = snap.val();
+                if (!remote || !remote.lastUpdated) return;
+                let clean = fbDesanitizeKeys(remote);
+                let localTime = parseInt(_ls('get','fb_last_sync') || '0');
+                let remoteTime = clean.lastUpdated || 0;
+                if (remoteTime > localTime) {
+                    if (clean.mainRecords) { mainRecords = Array.isArray(clean.mainRecords) ? clean.mainRecords : Object.values(clean.mainRecords); }
+                    if (clean.charniMaster) { charniMaster = Array.isArray(clean.charniMaster) ? clean.charniMaster : Object.values(clean.charniMaster); _ls('set','db_charni', JSON.stringify(charniMaster)); }
+                    if (clean.articleMaster) { articleMaster = Array.isArray(clean.articleMaster) ? clean.articleMaster : Object.values(clean.articleMaster); _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                    _ls('set','fb_last_sync', remoteTime.toString());
+                    _ls('set','db_records', JSON.stringify(mainRecords));
+                    renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
+                    if (typeof cmpInitDropdown === 'function') cmpInitDropdown();
+                    if (typeof bestKapanPopulateCharniFilter === 'function') bestKapanPopulateCharniFilter();
+                    fbUpdateStatus('✅ Data synced to cloud');
+                }
+            } catch(e) {
+                // silent — don't spam status on poll errors
+            }
+        }
+
+        // Refresh button: pull from Firebase OR do a hard page reload if offline
+        function appRefreshData() {
+            if (fbConnected && fbDb) {
+                fbUpdateStatus('🔄 Refreshing...');
+                fbPullLatest().then(() => {
+                    fbUpdateStatus('✅ Data synced to cloud');
+                });
+            } else {
+                // No Firebase — just reload page to re-read localStorage
+                if (confirm('Firebase connected નથી. Page reload કરવો?')) {
+                    location.reload();
+                }
+            }
         }
 
         async function fbConnect() {
@@ -3657,7 +3732,7 @@
             });
 
             if (fbSyncTimer) clearInterval(fbSyncTimer);
-            fbSyncTimer = setInterval(() => { fbPushData(); }, 30000);
+            fbSyncTimer = setInterval(() => { fbPullLatest(); }, 2000);
         }
 
         // Sanitize Firebase keys: replace invalid chars (., #, $, /, [, ])
