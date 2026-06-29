@@ -3297,19 +3297,43 @@
                 fbUpdateStatus('❌ API Key, Project ID અને Database URL જરૂરી', true);
                 return;
             }
+            fbUpdateStatus('🔄 Connecting...');
+            try {
+                if (firebase.apps.length) firebase.app().delete();
+            } catch(e) {}
             try {
                 fbApp = firebase.initializeApp(cfg);
                 fbUpdateStatus('🔄 Signing in anonymously...');
                 firebase.auth(fbApp).signInAnonymously()
                     .then(() => {
-                        fbDb = firebase.database(fbApp);
-                        fbConnected = true;
-                        fbSaveConfigToLS();
-                        fbUpdateStatus('✅ Firebase RTDB Connected! (Anonymous Auth)');
-                        fbStartSyncListener();
+                        fbUpdateStatus('🔄 Auth OK, connecting DB...');
+                        try {
+                            fbDb = firebase.database(fbApp);
+                            let testRef = fbDb.ref('.info/connected');
+                            testRef.on('value', (snap) => {
+                                if (snap.val() === true) {
+                                    fbConnected = true;
+                                    fbSaveConfigToLS();
+                                    fbUpdateStatus('✅ Firebase RTDB Connected! (Anonymous Auth)');
+                                    fbStartSyncListener();
+                                }
+                            });
+                            // Timeout fallback
+                            setTimeout(() => {
+                                if (!fbConnected) {
+                                    fbConnected = true;
+                                    fbSaveConfigToLS();
+                                    fbUpdateStatus('✅ Firebase DB reference created');
+                                    fbStartSyncListener();
+                                }
+                            }, 3000);
+                        } catch(e) {
+                            fbUpdateStatus('❌ DB error: ' + e.message, true);
+                            fbConnected = false;
+                        }
                     })
                     .catch((err) => {
-                        fbUpdateStatus('❌ Auth error: ' + err.message + ' — Anonymous sign-in enabled?', true);
+                        fbUpdateStatus('❌ Auth error: ' + err.message, true);
                         fbConnected = false;
                     });
             } catch(e) {
@@ -3395,25 +3419,14 @@
         function fbShowHelp() {
             alert(`☁️ Firebase Realtime DB Setup Guide:
 
-1. Go to https://console.firebase.google.com/project/ng-cost
-2. Left menu → Realtime Database → Rules tab
-3. Paste these rules and Publish:
-
-{
-  "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null"
-  }
-}
-
-4. Left menu → Authentication → Sign-in method
-5. Enable "Anonymous" provider
-6. ⚙️ Project Settings → General → copy config
-7. Paste in fields above → Connect
-
-✅ Done! Data auto-syncs every 30 seconds.`);
-            window.open('https://console.firebase.google.com/project/ng-cost/overview', '_blank');
-        }
+1. Go to https://console.firebase.google.com/project/ng-cost/database
+2. If no DB yet → Create Database → Next → Start in test mode → Enable
+3. Copy the URL shown at top (e.g. https://ng-cost-default-rtdb.firebaseio.com)
+   → Paste it in the databaseURL field in Settings
+4. Go to Authentication → Sign-in method → Enable "Anonymous"
+5. Rules tab → paste this → Publish:
+   { "rules": { ".read": "auth != null", ".write": "auth != null" } }
+6. Refresh app → Login → auto-connect`);
 
         // ============================================================
         // 🔐 LOGIN HISTORY + AUTO BACKUP
