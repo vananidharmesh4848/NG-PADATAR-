@@ -3237,15 +3237,15 @@
         let fbSyncTimer = null;
 
         function fbGetConfig() {
-            return {
-                apiKey: document.getElementById('fb_apiKey').value.trim(),
-                authDomain: document.getElementById('fb_authDomain').value.trim(),
-                databaseURL: document.getElementById('fb_databaseURL').value.trim(),
-                projectId: document.getElementById('fb_projectId').value.trim(),
-                storageBucket: document.getElementById('fb_storageBucket').value.trim(),
-                messagingSenderId: document.getElementById('fb_messagingSenderId').value.trim(),
-                appId: document.getElementById('fb_appId').value.trim()
-            };
+            function v(id) { return document.getElementById(id).value.trim(); }
+            let apiKey = v('fb_apiKey') || "AIzaSyDvu7pJMXatKNHFAuJMtsh_zpmb8Jr0BCM";
+            let authDomain = v('fb_authDomain') || "ng-cost.firebaseapp.com";
+            let databaseURL = v('fb_databaseURL') || "https://ng-cost-default-rtdb.firebaseio.com";
+            let projectId = v('fb_projectId') || "ng-cost";
+            let storageBucket = v('fb_storageBucket') || "ng-cost.firebasestorage.app";
+            let messagingSenderId = v('fb_messagingSenderId') || "1085823954995";
+            let appId = v('fb_appId') || "1:1085823954995:web:41305ea073514cb6fd3346";
+            return { apiKey, authDomain, databaseURL, projectId, storageBucket, messagingSenderId, appId };
         }
 
         function fbSaveConfigToLS() {
