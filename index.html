@@ -970,6 +970,16 @@
             } catch(e) {
                 alert('⚠️ Storage ભરાઈ ગઈ! જૂના data export કરો.\n' + e.message);
             }
+            // Real-time Firebase sync khi connected hoy to
+            if (typeof fbConnected !== 'undefined' && fbConnected && typeof fbPushData === 'function') {
+                fbPushData();
+            }
+        }
+        // Call this after master data changes to sync to Firebase
+        function fbAutoSync() {
+            if (typeof fbConnected !== 'undefined' && fbConnected && typeof fbPushData === 'function') {
+                fbPushData();
+            }
         }
 
         // Tab Switch Logic
@@ -1037,12 +1047,14 @@
             _ls('set','db_charni', JSON.stringify(charniMaster));
             input.value = "";
             renderMasterUI();
+            fbAutoSync();
         }
 
         function deleteCharni(idx) {
             charniMaster.splice(idx, 1);
             _ls('set','db_charni', JSON.stringify(charniMaster));
             renderMasterUI();
+            fbAutoSync();
         }
 
         // ARTICLE MASTER FUNCTIONS
@@ -1069,6 +1081,7 @@
             _ls('set','db_articles', JSON.stringify(articleMaster));
             alert("આર્ટીકલ માસ્ટર પર્ફેક્ટ સેવ થઈ ગયું!");
             renderMasterUI();
+            fbAutoSync();
         }
 
         function deleteArticle(idx) {
@@ -1076,6 +1089,7 @@
                 articleMaster.splice(idx, 1);
                 _ls('set','db_articles', JSON.stringify(articleMaster));
                 renderMasterUI();
+                fbAutoSync();
             }
         }
 
@@ -1104,6 +1118,7 @@
             let formSelect = document.getElementById('f_article');
             formSelect.innerHTML = "";
             articleMaster.forEach(a => { formSelect.innerHTML += `<option value="${a.name}">${a.name}</option>`; });
+            fbAutoSync();
         }
 
         function addCharniToArticle(artIdx) {
@@ -1121,6 +1136,7 @@
             art.charnis.push({ name: chName, bhav: chBhav });
             _ls('set','db_articles', JSON.stringify(articleMaster));
             renderMasterUI();
+            fbAutoSync();
         }
 
         function deleteArticleCharni(artIdx, charniIdx) {
@@ -1130,6 +1146,7 @@
                 art.charnis.splice(charniIdx, 1);
                 _ls('set','db_articles', JSON.stringify(articleMaster));
                 renderMasterUI();
+                fbAutoSync();
             }
         }
 
