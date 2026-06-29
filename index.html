@@ -3432,13 +3432,14 @@
             fbUpdateStatus('⏸️ Disconnected');
         }
 
+        let _fbPushing = false;
         function fbStartSyncListener() {
             if (!fbDb) return;
             let ref = fbDb.ref('diamond_erp/mainData');
             // On first connect, push local data so remote always has latest
             setTimeout(() => { fbPushData(); }, 500);
             ref.on('value', (snap) => {
-                if (!fbConnected) return;
+                if (!fbConnected || _fbPushing) return;
                 let remote = snap.val();
                 if (remote && remote.lastUpdated) {
                     let clean = fbDesanitizeKeys(remote);
@@ -3499,7 +3500,8 @@
         }
 
         async function fbPushData() {
-            if (!fbDb || !fbConnected) return;
+            if (!fbDb || !fbConnected || _fbPushing) return;
+            _fbPushing = true;
             try {
                 let ref = fbDb.ref('diamond_erp/mainData');
                 let safeData = fbSanitizeKeys({
@@ -3513,6 +3515,8 @@
                 fbUpdateStatus('✅ Data synced to cloud');
             } catch(e) {
                 fbUpdateStatus('⚠️ Sync error: ' + e.message, true);
+            } finally {
+                _fbPushing = false;
             }
         }
 
