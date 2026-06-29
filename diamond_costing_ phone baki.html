@@ -941,13 +941,12 @@
                     `📊 કાપન records: <strong>${mainRecords.length}</strong> &nbsp;|&nbsp; Storage used: <strong>${kb} KB</strong> / ~5120 KB`;
                 renderLoginHistory();
                 fbLoadConfigFromLS();
-                if (_ls('get','fb_config')) {
-                    setTimeout(() => {
-                        if (!fbConnected) fbConnect();
-                    }, 500);
+                if (_ls('get','fb_config') && !fbConnected) {
+                    setTimeout(() => { fbConnect(); }, 500);
                 }
                 getAutoBackupStatus();
             }
+        }
         }
 
         // CHARNI MASTER FUNCTIONS
@@ -3664,6 +3663,11 @@
                 document.getElementById('loginOverlay').classList.add('hidden');
                 document.getElementById('loginId').value = '';
                 document.getElementById('loginPass').value = '';
+                // Auto-connect Firebase
+                fbLoadConfigFromLS();
+                setTimeout(() => {
+                    if (!fbConnected && _ls('get','fb_config')) fbConnect();
+                }, 1000);
             } else {
                 errEl.classList.remove('hidden');
                 document.getElementById('loginPass').value = '';
