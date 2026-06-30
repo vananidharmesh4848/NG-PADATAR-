@@ -1262,6 +1262,41 @@
             fbAutoSync();
         }
 
+        function recalcRecordsForArticle(articleName) {
+            let art = articleMaster.find(a => a.name === articleName);
+            if(!art) return 0;
+
+            let bhavLookup = {};
+            art.charnis.forEach(c => { bhavLookup[c.name] = c.bhav; });
+
+            let updatedCount = 0;
+            mainRecords.forEach(r => {
+                if(r.articleName !== articleName || !r.charniMap) return;
+
+                let totalCharniRupees = 0;
+                let newCharniMap = {};
+                Object.keys(r.charniMap).forEach(chName => {
+                    let old = r.charniMap[chName];
+                    let newBhav = (bhavLookup[chName] !== undefined) ? bhavLookup[chName] : old.bhav;
+                    let contribution = newBhav * (old.percentage / 100);
+                    totalCharniRupees += contribution;
+                    newCharniMap[chName] = {
+                        percentage: old.percentage,
+                        rupees: Math.round(contribution),
+                        bhav: newBhav
+                    };
+                });
+
+                r.charniMap = newCharniMap;
+                r.polishAverage = totalCharniRupees;
+                r.difference = r.polishAverage - r.finalPadtar;
+                updatedCount++;
+            });
+
+            if(updatedCount > 0) saveRecords();
+            return updatedCount;
+        }
+
         function saveArticleInlineEdit(artIdx) {
             let art = articleMaster[artIdx];
             if(!art) return;
@@ -1275,13 +1310,16 @@
             });
 
             _ls('set','db_articles', JSON.stringify(articleMaster));
+
+            let recalcCount = recalcRecordsForArticle(art.name);
+            if (typeof renderRegisterTable === 'function') renderRegisterTable();
             
             let btn = document.querySelector(`button[onclick="saveArticleInlineEdit(${artIdx})"]`);
             if(btn) {
                 let orig = btn.innerHTML;
-                btn.innerHTML = "✅ સેવ થઈ ગયું!";
+                btn.innerHTML = recalcCount > 0 ? `✅ સેવ + ${recalcCount} રેકોર્ડ રિકેલ્ક્યુલેટ!` : "✅ સેવ થઈ ગયું!";
                 btn.classList.replace('bg-green-600','bg-emerald-500');
-                setTimeout(() => { btn.innerHTML = orig; btn.classList.replace('bg-emerald-500','bg-green-600'); }, 1500);
+                setTimeout(() => { btn.innerHTML = orig; btn.classList.replace('bg-emerald-500','bg-green-600'); }, 2000);
             }
             
             let formSelect = document.getElementById('f_article');
