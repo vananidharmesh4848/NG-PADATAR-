@@ -1229,6 +1229,39 @@
             }
         }
 
+        function renameArticle(idx) {
+            let art = articleMaster[idx];
+            if(!art) return;
+
+            let newName = prompt("આર્ટીકલનું નવું નામ ટાઈપ કરો:", art.name);
+            if(newName === null) return;
+            newName = newName.trim().toUpperCase();
+            if(!newName) { alert("આર્ટીકલનું નામ ખાલી ન હોઈ શકે!"); return; }
+            if(newName === art.name) return;
+
+            if(articleMaster.some((a, i) => i !== idx && a.name === newName)) {
+                alert("આ નામનું આર્ટીકલ પહેલેથી જ અસ્તિત્વમાં છે!");
+                return;
+            }
+
+            pushUndo();
+            let oldName = art.name;
+            art.name = newName;
+
+            // Old name reference ne badha existing records ma pan update karo
+            let updatedCount = 0;
+            mainRecords.forEach(r => {
+                if(r.articleName === oldName) { r.articleName = newName; updatedCount++; }
+            });
+
+            _ls('set','db_articles', JSON.stringify(articleMaster));
+            _ls('set','db_records', JSON.stringify(mainRecords));
+            renderMasterUI();
+            if (typeof renderRegisterTable === 'function') renderRegisterTable();
+            alert(`આર્ટીકલનું નામ બદલાઈ ગયું: "${oldName}" → "${newName}"${updatedCount > 0 ? `\n(${updatedCount} જૂના રેકોર્ડ્સ પણ અપડેટ થયા)` : ''}`);
+            fbAutoSync();
+        }
+
         function saveArticleInlineEdit(artIdx) {
             let art = articleMaster[artIdx];
             if(!art) return;
@@ -1328,7 +1361,10 @@
                     <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-sm">
                         <div class="flex items-center justify-between mb-2 border-b border-amber-100 pb-1.5">
                             <h4 class="font-black text-blue-900 text-sm uppercase tracking-wide">${art.name}</h4>
-                            <button onclick="deleteArticle(${index})" class="text-red-500 hover:text-red-700 font-bold text-xs cursor-pointer px-1" title="આર્ટીકલ ડિલીટ">❌</button>
+                            <div class="flex items-center gap-2">
+                                <button onclick="renameArticle(${index})" class="text-blue-600 hover:text-blue-800 font-bold text-xs cursor-pointer px-1" title="આર્ટીકલ નામ એડિટ">✏️</button>
+                                <button onclick="deleteArticle(${index})" class="text-red-500 hover:text-red-700 font-bold text-xs cursor-pointer px-1" title="આર્ટીકલ ડિલીટ">❌</button>
+                            </div>
                         </div>
                         <div class="mb-2">
                             <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">💎 ચાલની ભાવ:</label>
