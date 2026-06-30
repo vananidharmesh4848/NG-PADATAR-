@@ -431,6 +431,7 @@
                     <div class="flex items-center gap-2">
                         <label class="text-xs font-black text-amber-900 uppercase whitespace-nowrap">↕️ સોર્ટ:</label>
                         <select id="r_sort_field" onchange="renderRegisterTable()" class="p-1.5 text-sm border border-amber-400 bg-white font-black text-blue-900 rounded shadow-sm focus:ring-2 focus:ring-amber-500">
+                            <option value="default" selected>નવી એન્ટ્રી પ્રથમ (Default)</option>
                             <option value="mangeluRaf">માંગેલું રફ પો.%</option>
                             <option value="finalPadtar">ફાઈનલ પડતર</option>
                             <option value="difference">ડિફરન્સ</option>
@@ -1262,6 +1263,28 @@
             fbAutoSync();
         }
 
+        function repairNaNRecords() {
+            let fixedCount = 0;
+            mainRecords.forEach(r => {
+                let avgBad = (r.polishAverage === undefined || r.polishAverage === null || isNaN(r.polishAverage));
+                let diffBad = (r.difference === undefined || r.difference === null || isNaN(r.difference));
+                if(!avgBad && !diffBad) return;
+
+                let total = 0;
+                if(r.charniMap) {
+                    Object.values(r.charniMap).forEach(cd => {
+                        let v = Number(cd.rupees);
+                        if(!isNaN(v)) total += v;
+                    });
+                }
+                r.polishAverage = total;
+                r.difference = total - (Number(r.finalPadtar) || 0);
+                fixedCount++;
+            });
+            if(fixedCount > 0) saveRecords();
+            return fixedCount;
+        }
+
         function recalcRecordsForArticle(articleName) {
             let art = articleMaster.find(a => a.name === articleName);
             if(!art) return 0;
@@ -1277,11 +1300,25 @@
                 let newCharniMap = {};
                 Object.keys(r.charniMap).forEach(chName => {
                     let old = r.charniMap[chName];
-                    let newBhav = (bhavLookup[chName] !== undefined) ? bhavLookup[chName] : old.bhav;
-                    let contribution = newBhav * (old.percentage / 100);
+                    let oldPercentage = Number(old.percentage) || 0;
+                    let oldBhav = Number(old.bhav);
+                    let newBhav, contribution;
+
+                    if (bhavLookup[chName] !== undefined) {
+                        newBhav = bhavLookup[chName];
+                        contribution = newBhav * (oldPercentage / 100);
+                    } else if (!isNaN(oldBhav)) {
+                        newBhav = oldBhav;
+                        contribution = newBhav * (oldPercentage / 100);
+                    } else {
+                        // bhav unknown for this charni (juni/legacy entry) - jevu rupees hatu evu j rakho, NaN na thaay
+                        newBhav = 0;
+                        contribution = Number(old.rupees) || 0;
+                    }
+
                     totalCharniRupees += contribution;
                     newCharniMap[chName] = {
-                        percentage: old.percentage,
+                        percentage: oldPercentage,
                         rupees: Math.round(contribution),
                         bhav: newBhav
                     };
@@ -1289,7 +1326,7 @@
 
                 r.charniMap = newCharniMap;
                 r.polishAverage = totalCharniRupees;
-                r.difference = r.polishAverage - r.finalPadtar;
+                r.difference = r.polishAverage - (Number(r.finalPadtar) || 0);
                 updatedCount++;
             });
 
@@ -4429,6 +4466,7 @@
             applySettings();
             checkAutoLogin();
             autoDetectViewMode();
+            repairNaNRecords();
             renderMasterUI();
             epInitDropdowns();
             cmpInitDropdown();
