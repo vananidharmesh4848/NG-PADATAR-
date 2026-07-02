@@ -1216,6 +1216,36 @@
             fbAutoSync();
         }
 
+        // Keep every article's charni order in sync with the master chalani order
+        function reorderArticleCharnisByMaster() {
+            articleMaster.forEach(art => {
+                art.charnis.sort((a, b) => charniMaster.indexOf(a.name) - charniMaster.indexOf(b.name));
+            });
+            _ls('set','db_articles', JSON.stringify(articleMaster));
+        }
+
+        function moveCharniUp(idx) {
+            if (idx <= 0) return;
+            pushUndo();
+            [charniMaster[idx - 1], charniMaster[idx]] = [charniMaster[idx], charniMaster[idx - 1]];
+            _ls('set','db_charni', JSON.stringify(charniMaster));
+            reorderArticleCharnisByMaster();
+            renderMasterUI();
+            renderRegisterTable();
+            fbAutoSync();
+        }
+
+        function moveCharniDown(idx) {
+            if (idx >= charniMaster.length - 1) return;
+            pushUndo();
+            [charniMaster[idx + 1], charniMaster[idx]] = [charniMaster[idx], charniMaster[idx + 1]];
+            _ls('set','db_charni', JSON.stringify(charniMaster));
+            reorderArticleCharnisByMaster();
+            renderMasterUI();
+            renderRegisterTable();
+            fbAutoSync();
+        }
+
         let _charniEditIdx = -1;
         function editCharni(idx) {
             _charniEditIdx = idx;
@@ -1471,6 +1501,8 @@
             charniMaster.forEach((ch, i) => {
                 chipsCont.innerHTML += `
                     <span class="bg-slate-200 text-slate-800 text-[11px] font-bold px-2 py-1 rounded flex items-center gap-1 border border-slate-300 shadow-sm">
+                        <button onclick="moveCharniUp(${i})" ${i===0?'disabled':''} style="color:#334155;font-size:11px;background:none;border:none;cursor:pointer;font-weight:900;padding:0 1px;${i===0?'opacity:0.25;cursor:not-allowed;':''}" title="ઉપર ખસેડો">▲</button>
+                        <button onclick="moveCharniDown(${i})" ${i===charniMaster.length-1?'disabled':''} style="color:#334155;font-size:11px;background:none;border:none;cursor:pointer;font-weight:900;padding:0 1px;${i===charniMaster.length-1?'opacity:0.25;cursor:not-allowed;':''}" title="નીચે ખસેડો">▼</button>
                         ${ch}
                         <button onclick="editCharni(${i})" style="color:#2563eb;font-size:11px;background:none;border:none;cursor:pointer;font-weight:900;padding:0 2px;" title="Edit">✏️</button>
                         <button onclick="deleteCharni(${i})" class="text-red-500 font-bold ml-0.5 cursor-pointer hover:text-red-700" style="background:none;border:none;font-size:13px;line-height:1;">×</button>
