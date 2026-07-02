@@ -1486,6 +1486,7 @@
             if(art.charnis.find(c => c.name === chName)) { alert("આર્ટીકલમાં આ ચાલની ઓલરેડી છે!"); return; }
 
             art.charnis.push({ name: chName, bhav: chBhav });
+            art.charnis.sort((a, b) => charniMaster.indexOf(a.name) - charniMaster.indexOf(b.name));
             _ls('set','db_articles', JSON.stringify(articleMaster));
             renderMasterUI();
             fbAutoSync();
