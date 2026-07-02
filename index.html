@@ -997,11 +997,17 @@
         ];
         let mainRecords = JSON.parse(_ls('get','db_records')) || [];
         // 📦 Box Master — 3 configurable total-columns for Register (set from Master Panel)
-        let boxMaster = JSON.parse(_ls('get','db_boxmaster')) || [
-            { name: "બોક્સ 1", charnis: [] },
-            { name: "બોક્સ 2", charnis: [] },
-            { name: "બોક્સ 3", charnis: [] }
-        ];
+        function normalizeBoxMaster(bm) {
+            let arr = Array.isArray(bm) ? bm : [];
+            return [0, 1, 2].map(i => {
+                let b = arr[i];
+                return {
+                    name: (b && typeof b.name === 'string' && b.name) ? b.name : ('બોક્સ ' + (i + 1)),
+                    charnis: (b && Array.isArray(b.charnis)) ? b.charnis : []
+                };
+            });
+        }
+        let boxMaster = normalizeBoxMaster(JSON.parse(_ls('get','db_boxmaster') || 'null'));
 
         function saveRecords() {
             try {
@@ -1042,7 +1048,7 @@
 
         // Sum of % for the charnis assigned to a box, for one record
         function computeBoxTotal(rec, box) {
-            if (!rec || !rec.charniMap || !box || !box.charnis || !box.charnis.length) return 0;
+            if (!rec || !rec.charniMap || !box || !Array.isArray(box.charnis) || !box.charnis.length) return 0;
             let total = 0;
             box.charnis.forEach(chName => {
                 let cell = rec.charniMap[chName];
@@ -1056,8 +1062,9 @@
             if (!cont) return;
             cont.innerHTML = "";
             boxMaster.forEach((box, idx) => {
+                let boxCharnis = Array.isArray(box.charnis) ? box.charnis : [];
                 let checksHtml = charniMaster.map(ch => {
-                    let checked = box.charnis.includes(ch) ? 'checked' : '';
+                    let checked = boxCharnis.includes(ch) ? 'checked' : '';
                     return `<label class="flex items-center gap-1.5 font-semibold text-slate-700 py-0.5 px-1 hover:bg-slate-100 rounded cursor-pointer">
                         <input type="checkbox" value="${ch}" class="m-box-check-${idx} h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${checked}> ${ch}
                     </label>`;
@@ -1104,7 +1111,7 @@
             mainRecords   = obj.mainRecords;
             charniMaster  = obj.charniMaster;
             articleMaster = obj.articleMaster;
-            boxMaster     = obj.boxMaster || boxMaster;
+            boxMaster     = normalizeBoxMaster(obj.boxMaster || boxMaster);
             _ls('set','db_records',   JSON.stringify(mainRecords));
             _ls('set','db_charni',    JSON.stringify(charniMaster));
             _ls('set','db_articles',  JSON.stringify(articleMaster));
@@ -3651,7 +3658,7 @@
                     mainRecords = data.mainRecords || [];
                     if (data.charniMaster) { charniMaster = data.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
                     if (data.articleMaster) { articleMaster = data.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
-                    if (data.boxMaster) { boxMaster = data.boxMaster; _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
+                    if (data.boxMaster) { boxMaster = normalizeBoxMaster(data.boxMaster); _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
                     saveRecords();
                     renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                     alert('✅ Data સફળતાપૂર્વક import થઈ ગયો!');
@@ -3828,7 +3835,7 @@
                     if (clean.mainRecords) { mainRecords = Array.isArray(clean.mainRecords) ? clean.mainRecords : Object.values(clean.mainRecords); }
                     if (clean.charniMaster) { charniMaster = Array.isArray(clean.charniMaster) ? clean.charniMaster : Object.values(clean.charniMaster); _ls('set','db_charni', JSON.stringify(charniMaster)); }
                     if (clean.articleMaster) { articleMaster = Array.isArray(clean.articleMaster) ? clean.articleMaster : Object.values(clean.articleMaster); _ls('set','db_articles', JSON.stringify(articleMaster)); }
-                    if (clean.boxMaster) { boxMaster = Array.isArray(clean.boxMaster) ? clean.boxMaster : Object.values(clean.boxMaster); _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
+                    if (clean.boxMaster) { boxMaster = normalizeBoxMaster(Array.isArray(clean.boxMaster) ? clean.boxMaster : Object.values(clean.boxMaster)); _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
                     _ls('set','fb_last_sync', remoteTime.toString());
                     _ls('set','db_records', JSON.stringify(mainRecords));
                     renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
@@ -3944,7 +3951,7 @@
                     if (clean.mainRecords) { mainRecords = Array.isArray(clean.mainRecords) ? clean.mainRecords : Object.values(clean.mainRecords); }
                     if (clean.charniMaster) { charniMaster = Array.isArray(clean.charniMaster) ? clean.charniMaster : Object.values(clean.charniMaster); _ls('set','db_charni', JSON.stringify(charniMaster)); }
                     if (clean.articleMaster) { articleMaster = Array.isArray(clean.articleMaster) ? clean.articleMaster : Object.values(clean.articleMaster); _ls('set','db_articles', JSON.stringify(articleMaster)); }
-                    if (clean.boxMaster) { boxMaster = Array.isArray(clean.boxMaster) ? clean.boxMaster : Object.values(clean.boxMaster); _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
+                    if (clean.boxMaster) { boxMaster = normalizeBoxMaster(Array.isArray(clean.boxMaster) ? clean.boxMaster : Object.values(clean.boxMaster)); _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
                     _ls('set','fb_last_sync', remoteTime.toString());
                     _ls('set','db_records', JSON.stringify(mainRecords));
                     renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
@@ -4027,7 +4034,7 @@
                                 mainRecords = clean.mainRecords;
                                 if (clean.charniMaster) { charniMaster = clean.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
                                 if (clean.articleMaster) { articleMaster = clean.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
-                                if (clean.boxMaster) { boxMaster = clean.boxMaster; _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
+                                if (clean.boxMaster) { boxMaster = normalizeBoxMaster(clean.boxMaster); _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
                                 saveRecords();
                                 renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                                 _ls('set','fb_last_sync', data.lastUpdated.toString());
