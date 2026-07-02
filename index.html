@@ -506,6 +506,13 @@
 
             </div>
 
+            <div class="mt-6 bg-white p-4 rounded-lg border border-amber-200 shadow-sm">
+                <h2 class="text-xs font-bold text-amber-950 mb-1 border-b pb-1.5 uppercase tracking-wide">૩. બોક્સ ટોટલ માસ્ટર (Register માં 3 નવા કોલમ)</h2>
+                <p class="text-[11px] text-slate-500 mb-3">દરેક બોક્સનું નામ લખો, પછી તેમાં કઈ ચારણી ગણવી તે સિલેક્ટ કરો — Register માં તે ચારણીઓની %નો ટોટલ બોક્સના કોલમમાં દેખાશે.</p>
+                <div id="boxMasterContainer" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    </div>
+            </div>
+
             <div class="mt-6 bg-white p-4 rounded-lg border border-amber-200 text-xs shadow-sm">
                 <h3 class="font-bold text-slate-800 mb-3 border-b pb-1 uppercase tracking-wide">📋 સિસ્ટમમાં ઓલરેડી સેવ કરેલા આર્ટીકલ્સ અને તેના ચાલની રેટ</h3>
                 <div id="savedArticlesListView" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -989,6 +996,12 @@
             }
         ];
         let mainRecords = JSON.parse(_ls('get','db_records')) || [];
+        // 📦 Box Master — 3 configurable total-columns for Register (set from Master Panel)
+        let boxMaster = JSON.parse(_ls('get','db_boxmaster')) || [
+            { name: "બોક્સ 1", charnis: [] },
+            { name: "બોક્સ 2", charnis: [] },
+            { name: "બોક્સ 3", charnis: [] }
+        ];
 
         function saveRecords() {
             try {
@@ -1008,6 +1021,61 @@
             }
         }
 
+        // 📦 BOX MASTER FUNCTIONS (3 configurable total-columns in Register)
+        function saveBoxMaster() {
+            _ls('set','db_boxmaster', JSON.stringify(boxMaster));
+            fbAutoSync();
+        }
+
+        function saveBoxSetting(idx) {
+            let nameInput = document.getElementById('m_box_name_' + idx);
+            let name = (nameInput.value || '').trim();
+            if (!name) { alert('બોક્સનું નામ ખાલી ન હોવું જોઈએ!'); return; }
+            let checked = document.querySelectorAll('.m-box-check-' + idx + ':checked');
+            let selectedCharnis = Array.from(checked).map(cb => cb.value);
+            pushUndo();
+            boxMaster[idx] = { name: name, charnis: selectedCharnis };
+            saveBoxMaster();
+            renderRegisterTable();
+            alert('✅ ' + name + ' સેવ થઈ ગયું!');
+        }
+
+        // Sum of % for the charnis assigned to a box, for one record
+        function computeBoxTotal(rec, box) {
+            if (!rec || !rec.charniMap || !box || !box.charnis || !box.charnis.length) return 0;
+            let total = 0;
+            box.charnis.forEach(chName => {
+                let cell = rec.charniMap[chName];
+                if (cell && cell.percentage > 0) total += Number(cell.percentage) || 0;
+            });
+            return total;
+        }
+
+        function renderBoxMasterUI() {
+            let cont = document.getElementById('boxMasterContainer');
+            if (!cont) return;
+            cont.innerHTML = "";
+            boxMaster.forEach((box, idx) => {
+                let checksHtml = charniMaster.map(ch => {
+                    let checked = box.charnis.includes(ch) ? 'checked' : '';
+                    return `<label class="flex items-center gap-1.5 font-semibold text-slate-700 py-0.5 px-1 hover:bg-slate-100 rounded cursor-pointer">
+                        <input type="checkbox" value="${ch}" class="m-box-check-${idx} h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${checked}> ${ch}
+                    </label>`;
+                }).join('') || '<div class="text-[11px] text-slate-400 py-2">પહેલા ચારણી માસ્ટરમાં ચારણી ઉમેરો.</div>';
+
+                cont.innerHTML += `
+                    <div class="bg-slate-50 border border-slate-300 rounded-lg p-3">
+                        <input type="text" id="m_box_name_${idx}" value="${box.name}" placeholder="બોક્સનું નામ" class="w-full p-1.5 mb-2 text-xs border-2 border-slate-400 rounded font-black text-slate-900 bg-white">
+                        <div class="space-y-0.5 bg-white p-2 rounded border max-h-[150px] overflow-y-auto mb-2">
+                            ${checksHtml}
+                        </div>
+                        <button onclick="saveBoxSetting(${idx})" class="w-full bg-slate-700 hover:bg-slate-900 text-white font-bold py-1.5 rounded cursor-pointer text-xs shadow">
+                            💾 બોક્સ સેવ કરો
+                        </button>
+                    </div>`;
+            });
+        }
+
         // ============================================================
         // ↩ UNDO / REDO ENGINE (max 30 snapshots)
         // ============================================================
@@ -1019,7 +1087,8 @@
             return JSON.stringify({
                 mainRecords: mainRecords,
                 charniMaster: charniMaster,
-                articleMaster: articleMaster
+                articleMaster: articleMaster,
+                boxMaster: boxMaster
             });
         }
 
@@ -1035,9 +1104,11 @@
             mainRecords   = obj.mainRecords;
             charniMaster  = obj.charniMaster;
             articleMaster = obj.articleMaster;
+            boxMaster     = obj.boxMaster || boxMaster;
             _ls('set','db_records',   JSON.stringify(mainRecords));
             _ls('set','db_charni',    JSON.stringify(charniMaster));
             _ls('set','db_articles',  JSON.stringify(articleMaster));
+            _ls('set','db_boxmaster', JSON.stringify(boxMaster));
             fbAutoSync();
             renderMasterUI();
             updateRegisterFilterDropdown();
@@ -1418,6 +1489,8 @@
                     </div>`;
             });
 
+            renderBoxMasterUI();
+
             let listCont = document.getElementById('savedArticlesListView');
             listCont.innerHTML = "";
             articleMaster.forEach((art, index) => {
@@ -1698,6 +1771,13 @@
             let diffBg   = rec.difference >= 0 ? '#d1fae5' : '#fee2e2';
             let diffCol  = rec.difference >= 0 ? '#065f46' : '#991b1b';
             let diffSign = rec.difference >= 0 ? '+' : '';
+            let boxCellsHtml = boxMaster.map(box => {
+                let total = computeBoxTotal(rec, box);
+                if (total > 0) {
+                    return `<td style="background:#fffbeb;border:1px solid #fcd34d;text-align:center;padding:3px 6px;white-space:nowrap;font-weight:900;color:#92400e;font-size:12px;">${total.toFixed(2)}%</td>`;
+                }
+                return `<td style="background:#f8fafc;color:#cbd5e1;border:1px solid #e2e8f0;text-align:center;padding:2px 5px;">-</td>`;
+            }).join('');
             let charniCellsHtml = activeCharnisList.map(chName => {
                 let cellData = rec.charniMap && rec.charniMap[chName];
                 let chRate = (cellData && cellData.bhav) || (articleObj ? (articleObj.charnis.find(c => c.name === chName) || {}).bhav : 0);
@@ -1746,6 +1826,7 @@
                 <td style="background:#134e4a;color:#fff;font-weight:900;padding:3px 6px;text-align:center;border:1px solid #0f766e;white-space:nowrap;font-size:12px;">₹${Math.round(rec.finalPadtar).toLocaleString('en-IN')}</td>
                 <td style="background:#1e1b4b;color:#c7d2fe;font-weight:900;padding:3px 6px;text-align:center;border:1px solid #3730a3;white-space:nowrap;font-size:12px;">₹${Math.round(rec.polishAverage).toLocaleString('en-IN')}</td>
                 <td style="background:${diffBg};color:${diffCol};font-weight:900;padding:3px 6px;text-align:center;border:2px solid ${diffCol}40;white-space:nowrap;font-size:13px;">${diffSign}₹${Math.round(rec.difference).toLocaleString('en-IN')}</td>
+                ${boxCellsHtml}
                 ${charniCellsHtml}
                 ${actionsHtml}
             </tr>`;
@@ -1777,6 +1858,7 @@
                     <th style="background:#134e4a;color:#fff;padding:6px 8px;border:1px solid #0f766e;white-space:nowrap;font-size:12px;">ફાઈનલ પડતર</th>
                     <th style="background:#1e1b4b;color:#c7d2fe;padding:6px 8px;border:1px solid #3730a3;white-space:nowrap;font-size:12px;">પોલીશ એવરેજ</th>
                     <th style="background:#7f1d1d;color:#fff;padding:6px 8px;border:1px solid #991b1b;white-space:nowrap;font-size:12px;">ડિફરન્સ</th>
+                    ${boxMaster.map(box => `<th style="background:#92400e;color:#fff;padding:6px 8px;border:1px solid #b45309;white-space:nowrap;font-size:11px;">${box.name}</th>`).join('')}
                     ${activeCharnisList.map(chName => `<th style="background:#164e63;color:#fff;padding:4px 6px;border:1px solid #0e7490;white-space:nowrap;font-size:11px;">${chName}</th>`).join('')}
                     <th style="background:#7f1d1d;padding:6px 8px;border:1px solid #991b1b;white-space:nowrap;" class="pdf-export-ignore">એક્શન</th>
                 </tr>
@@ -3516,7 +3598,7 @@
         function exportAllData() {
             let exportObj = {
                 exportedAt: new Date().toISOString(),
-                mainRecords, charniMaster, articleMaster, appSettings
+                mainRecords, charniMaster, articleMaster, boxMaster, appSettings
             };
             let blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
             let a = document.createElement('a');
@@ -3537,6 +3619,7 @@
                     mainRecords = data.mainRecords || [];
                     if (data.charniMaster) { charniMaster = data.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
                     if (data.articleMaster) { articleMaster = data.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                    if (data.boxMaster) { boxMaster = data.boxMaster; _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
                     saveRecords();
                     renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                     alert('✅ Data સફળતાપૂર્વક import થઈ ગયો!');
@@ -3713,6 +3796,7 @@
                     if (clean.mainRecords) { mainRecords = Array.isArray(clean.mainRecords) ? clean.mainRecords : Object.values(clean.mainRecords); }
                     if (clean.charniMaster) { charniMaster = Array.isArray(clean.charniMaster) ? clean.charniMaster : Object.values(clean.charniMaster); _ls('set','db_charni', JSON.stringify(charniMaster)); }
                     if (clean.articleMaster) { articleMaster = Array.isArray(clean.articleMaster) ? clean.articleMaster : Object.values(clean.articleMaster); _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                    if (clean.boxMaster) { boxMaster = Array.isArray(clean.boxMaster) ? clean.boxMaster : Object.values(clean.boxMaster); _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
                     _ls('set','fb_last_sync', remoteTime.toString());
                     _ls('set','db_records', JSON.stringify(mainRecords));
                     renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
@@ -3828,6 +3912,7 @@
                     if (clean.mainRecords) { mainRecords = Array.isArray(clean.mainRecords) ? clean.mainRecords : Object.values(clean.mainRecords); }
                     if (clean.charniMaster) { charniMaster = Array.isArray(clean.charniMaster) ? clean.charniMaster : Object.values(clean.charniMaster); _ls('set','db_charni', JSON.stringify(charniMaster)); }
                     if (clean.articleMaster) { articleMaster = Array.isArray(clean.articleMaster) ? clean.articleMaster : Object.values(clean.articleMaster); _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                    if (clean.boxMaster) { boxMaster = Array.isArray(clean.boxMaster) ? clean.boxMaster : Object.values(clean.boxMaster); _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
                     _ls('set','fb_last_sync', remoteTime.toString());
                     _ls('set','db_records', JSON.stringify(mainRecords));
                     renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
@@ -3883,6 +3968,7 @@
                     mainRecords: mainRecords,
                     charniMaster: charniMaster,
                     articleMaster: articleMaster,
+                    boxMaster: boxMaster,
                     lastUpdated: now
                 });
                 await ref.set(safeData);
@@ -3909,6 +3995,7 @@
                                 mainRecords = clean.mainRecords;
                                 if (clean.charniMaster) { charniMaster = clean.charniMaster; _ls('set','db_charni', JSON.stringify(charniMaster)); }
                                 if (clean.articleMaster) { articleMaster = clean.articleMaster; _ls('set','db_articles', JSON.stringify(articleMaster)); }
+                                if (clean.boxMaster) { boxMaster = clean.boxMaster; _ls('set','db_boxmaster', JSON.stringify(boxMaster)); }
                                 saveRecords();
                                 renderMasterUI(); updateRegisterFilterDropdown(); renderRegisterTable(); renderRecentEntries();
                                 _ls('set','fb_last_sync', data.lastUpdated.toString());
@@ -4012,7 +4099,7 @@
             if (!force && now < next) return false;
             let exportObj = {
                 exportedAt: new Date().toISOString(),
-                mainRecords, charniMaster, articleMaster, appSettings,
+                mainRecords, charniMaster, articleMaster, boxMaster, appSettings,
                 backupType: force ? 'MANUAL' : 'AUTO'
             };
             _ls('set','last_auto_backup', now.toString());
@@ -4036,7 +4123,7 @@
             // Also download
             let exportObj = {
                 exportedAt: new Date().toISOString(),
-                mainRecords, charniMaster, articleMaster, appSettings,
+                mainRecords, charniMaster, articleMaster, boxMaster, appSettings,
                 backupType: 'MANUAL'
             };
             let blob = new Blob([JSON.stringify(exportObj, null, 2)], {type:'application/json'});
@@ -4053,7 +4140,7 @@
             if (!data) { alert('કોઈ બેકઅપ લોગ નથી.'); return; }
             try {
                 let obj = JSON.parse(data);
-                alert(`📋 છેલ્લો બેકઅપ:\nતારીખ: ${obj.exportedAt || 'N/A'}\nપ્રકાર: ${obj.backupType || 'N/A'}\nરેકોર્ડ્સ: ${(obj.mainRecords||[]).length}\nચારણી: ${(obj.charniMaster||[]).length}\nઆર્ટીકલ: ${(obj.articleMaster||[]).length}`);
+                alert(`📋 છેલ્લો બેકઅપ:\nતારીખ: ${obj.exportedAt || 'N/A'}\nપ્રકાર: ${obj.backupType || 'N/A'}\nરેકોર્ડ્સ: ${(obj.mainRecords||[]).length}\nચારણી: ${(obj.charniMaster||[]).length}\nઆર્ટીકલ: ${(obj.articleMaster||[]).length}\nબોક્સ: ${(obj.boxMaster||[]).length}`);
             } catch(e) { alert('બેકઅપ લોગ વાંચી શકાયો નહીં.'); }
         }
 
@@ -4133,7 +4220,7 @@
             let countBadge = document.getElementById('recentEntryCount');
             if (!container) return;
 
-            let last5 = [...mainRecords].reverse().slice(0, 5);
+            let last5 = mainRecords.slice(0, 5);
             countBadge.innerText = mainRecords.length + ' કુલ';
 
             if (!last5.length) {
